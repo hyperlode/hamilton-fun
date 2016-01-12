@@ -112,17 +112,17 @@ class HamiltonFun:
 			print "".join(printrow)
 
 if __name__ == "__main__":
-	rows = 15
-	cols = 5
+	rows = 5
+	cols = 4
 
 	lattice = HamiltonFun(rows,cols)
 	cycles = lattice.find_all_Hamilton_cycles()
 	#lattice.print_path_ASCII(cycles[0])
 	
-	# # # paths = lattice.find_all_Hamilton_paths_topLeftToBottomRight()
-	# # # #paths = lattice.find_all_Hamilton_paths((0,0),(2,3))
-	# # # for path in paths:
-		# # # lattice.print_path_ASCII(path)
-		# # # print "\n"
+	# paths = lattice.find_all_Hamilton_paths_topLeftToBottomRight()
+	paths = lattice.find_all_Hamilton_paths((0,0),(2,3))
+	for path in cycles:
+		lattice.print_path_ASCII(path)
+		print "\n"
 	
-	lattice.print_path_ASCII( lattice.find_Hamilton_path_topLeftToBottomRight() )
+	# lattice.print_path_ASCII( lattice.find_Hamilton_path_topLeftToBottomRight() )
