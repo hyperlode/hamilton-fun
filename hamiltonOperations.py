@@ -45,6 +45,8 @@ class HamiltonFun:
 		print self.__latticeGraph.find_path((0,0),(0,1))
 	
 	def find_all_Hamilton_cycles(self):
+		'''closed hamilton path
+		'''
 		paths = self.__latticeGraph.find_all_paths((0,0),(0,1)) 
 		self.__hamiltonCycles= []
 		for path in paths:
@@ -53,6 +55,28 @@ class HamiltonFun:
 				self.__hamiltonCycles.append( path)
 		return self.__hamiltonCycles
 	
+	
+	def find_all_Hamilton_paths_topLeftToBottomRight(self):
+		return self.find_all_Hamilton_paths((0,0),(self.__rows-1,self.__cols-1))
+		
+	def find_Hamilton_path_topLeftToBottomRight(self):
+		return self.find_Hamilton_path((0,0),(self.__rows-1,self.__cols-1))
+		
+	def find_Hamilton_path(self,startVertex, endVertex):
+		path = []
+		while len(path) != len(self.__latticeGraph.vertices()):
+			path = self.__latticeGraph.find_path(startVertex, endVertex) 
+		return path
+		
+	def find_all_Hamilton_paths(self,startVertex, endVertex):
+		'''paths going through each vertex only once, begin and end position set fixed.
+		'''
+		paths = self.__latticeGraph.find_all_paths(startVertex, endVertex) 
+		self.__hamiltonPaths= []
+		for path in paths:
+			if len(path) == len(self.__latticeGraph.vertices()):
+				self.__hamiltonPaths.append( path)
+		return self.__hamiltonPaths
 		
 	def print_path_ASCII(self,path):
 		#from a list of vertices, and rows and cols, print path on screen
@@ -88,9 +112,17 @@ class HamiltonFun:
 			print "".join(printrow)
 
 if __name__ == "__main__":
-	rows = 4
-	cols = 4
+	rows = 15
+	cols = 5
 
 	lattice = HamiltonFun(rows,cols)
 	cycles = lattice.find_all_Hamilton_cycles()
-	lattice.print_path_ASCII(cycles[0])
+	#lattice.print_path_ASCII(cycles[0])
+	
+	# # # paths = lattice.find_all_Hamilton_paths_topLeftToBottomRight()
+	# # # #paths = lattice.find_all_Hamilton_paths((0,0),(2,3))
+	# # # for path in paths:
+		# # # lattice.print_path_ASCII(path)
+		# # # print "\n"
+	
+	lattice.print_path_ASCII( lattice.find_Hamilton_path_topLeftToBottomRight() )
