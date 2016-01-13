@@ -10,7 +10,7 @@ class Graph(object):
     def __init__(self, graph_dict={}):
         """ initializes a graph object """
         self.__graph_dict = graph_dict
-
+        
     def vertices(self):
         """ returns the vertices of a graph """
         return list(self.__graph_dict.keys())
@@ -76,7 +76,28 @@ class Graph(object):
             if not graph[vertex]:
                 isolated += [vertex]
         return isolated
-
+    
+    def find_hamilton_path(self, start_vertex, end_vertex, path=[]):
+        #lode added 20160112
+		#when one hamilton path found, return.
+        """ find a path from start_vertex to end_vertex 
+            in graph """
+        graph = self.__graph_dict
+        path = path + [start_vertex]
+        # print "vertex:{} , endvertex: {}, {} , {}".format(start_vertex, end_vertex, len(path) , len(self.vertices()))
+        if start_vertex == end_vertex and len(path) == len(self.vertices()):
+            return path
+        if start_vertex not in graph:
+            return None
+        for vertex in graph[start_vertex]:
+            if vertex not in path:
+                extended_path = self.find_hamilton_path(vertex, 
+                                               end_vertex, 
+                                               path)
+                if extended_path: 
+                    return extended_path
+        return None
+	
     def find_path(self, start_vertex, end_vertex, path=[]):
         """ find a path from start_vertex to end_vertex 
             in graph """
@@ -224,3 +245,4 @@ class Graph(object):
             # sequence is increasing
             return False
         return True
+# 
