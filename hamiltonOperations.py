@@ -2,6 +2,10 @@ import graphs
 import fileOperations
 CELL_INSIDE = 0
 CELL_OUTSIDE = 1 
+CELL_SPLITPOINT_POTENTIAL = 2
+CELL_SPLITPOINT = 3
+CELL_RECOMBINATION_CANDIDATE = 4
+
 class HamiltonFun:
 	def __init__(self, lattice_rows, lattice_cols):
 		""" initializes a graph object """
@@ -46,11 +50,14 @@ class HamiltonFun:
 		cells = {(r,c):CELL_OUTSIDE for r in range(self.__rows-1) for c in range(self.__cols-1)}
 		return self.__explore_inside_of__hamilton_cycle(path, cells, (0,0)) 
 	
+	
+	
 	def __explore_inside_of__hamilton_cycle (self, path, cells, nodeCell):
 		#every cell has four directions, N, E, S, W . inside cells are all connected. Go over inside recursively
 		#add nodeCell as inside in cells
 		cells[nodeCell] = CELL_INSIDE
-		# print path
+		
+		#four directions, (common nodes with adjecent cell and adjecent cell )
 		for drA, dcA,drB,dcB,drC,dcC in [(0,0,0,1,-1,0),(0,1,1,1,0,1),(1,1,1,0,1,0),(1,0,0,0,0,-1)]:
 			nodeA = (nodeCell[0]+drA,nodeCell[1]+dcA)
 			nodeB = (nodeCell[0]+drB,nodeCell[1]+dcB)
@@ -81,9 +88,6 @@ class HamiltonFun:
 		return cells
 			#for every open direction, recursive.
 		
-	# def split(self, path, splitCell):
-		
-
 		
 	def find_split_cells(self, path):
 		#find all potential split cells in path or cycle.  
@@ -142,10 +146,169 @@ class HamiltonFun:
 					continue #next iteration of for loop (is not the same as break!!!)
 				else:
 					splitCells.append((row,col))
-		return splitCells
+		#indicate splitcells in cells
+		for cell in splitCells:
+			cells[cell] = CELL_SPLITPOINT_POTENTIAL 
 		
-	def __split_search_return_one_neighbour_or_none(self,path, node):
-		pass
+		return cells, splitCells
+	
+	def split(self, path, splitCell, cells):
+		#split the path in two at splitcell
+		nodeTopLeftPositionInPath = path.index(splitCell)
+		nodeBottomRightPositionInPath = path.index((splitCell[0]+1, splitCell[1]+1))
+		#  drA, dcA,drB,dcB,drC,dcC in [(0,0,0,1,-1,0),(0,1,1,1,0,1),(1,1,1,0,1,0),(1,0,0,0,0,-1)]:
+		#determine if vertical or horizontal
+		neighbours = self.neighbours_on_hamilton_path(path, splitCell)
+		#orthogonal neighbours of first node E and S
+		#orthoNodesInLattice =  {(row,col+1),(row+1,col)} #create as set
+		
+		#save state of split cell
+		isVertical = False
+		if  (splitCell[0],splitCell[1]+1) in neighbours:
+			#horizontal to vertical
+			isVertical = True
+		
+		#prepare split sequence
+		if nodeTopLeftPositionInPath > nodeBottomRightPositionInPath:
+			#exchange positions if sequence not like we want.
+			(nodeBottomRightPositionInPath, nodeTopLeftPositionInPath) = (nodeTopLeftPositionInPath, nodeBottomRightPositionInPath)
+		
+		#split paths
+		splitA = [path[:nodeBottomRightPositionInPath], path[nodeBottomRightPositionInPath:]]
+		splitTotal = [splitA[0][:nodeTopLeftPositionInPath:], splitA[0][nodeTopLeftPositionInPath:], splitA[1]]
+		
+		#delete start and endpoint repetition from cycle
+		if splitTotal[0][0] == splitTotal[2][-1]:
+			splitTotal[2].pop() 
+			
+		twoPaths =  [splitTotal[1]+[splitTotal[1][0]], splitTotal[2]+splitTotal[0] + [splitTotal[2][0]]]
+		
+		cells[splitCell] = CELL_SPLITPOINT
+		
+		return cells, twoPaths
+		# else:
+			# #vertical to horizontal
+	
+	def find_adjecentCells_from_two_path_coords(self,coord1, coord2,cells):
+		#ASSERT coord1 and coord2 are orthogonal neighbours on lattice
+		#sort coords
+		adjecent = []
+		
+		if coord1[0] == coord2[0]:
+			
+			#horizontal (row the same)
+			
+			#check sequence and make sure it is normalized (eliminate path direction)
+			if coord1[1] >coord2[1]:
+				coord1,coord2 = coord2,coord1
+			# print "horizzz"	
+			# print coord1, coord2
+			
+			try:
+				cells[coord1] 
+				adjecent.append(coord1)
+			except:
+				#ASSERT cell outside  boundaries
+				pass
+				
+			try:
+				cells[(coord1[0]-1,coord1[1])] 
+				adjecent.append((coord1[0]-1,coord1[1]))
+			except:
+				#ASSERT cell outside  boundaries
+				pass
+			
+			# if (coord1[0]-1) <0:
+				# #edge of lattice
+				# return [coord1]
+			# else:
+				# return [coord1, (coord1[0]-1,coord1[1])]
+				
+		else:
+			#vertical
+			#coord1[1] == coord2[1]:
+			#check sequence and make sure it is normalized (eliminate path direction)
+			
+			if coord1[0] > coord2[0]:
+				coord1,coord2 = coord2,coord1
+			# print "verticalll"
+			# print coord1 , coord2
+			
+			
+			try:
+				cells[coord1] 
+				adjecent.append(coord1)
+			except:
+				#ASSERT cell outside  boundaries
+				pass
+				
+			try:
+				cells[(coord1[0],coord1[1]-1)] 
+				adjecent.append((coord1[0],coord1[1]-1))
+			except:
+				#ASSERT cell outside  boundaries
+				pass
+			
+			# if coord1[1]-1 < 0:
+				# return [coord1]
+			# else:
+				# return [coord1, (coord1[0],coord1[1]-1)]
+		return adjecent
+		
+	def find_recombination_cells(self, paths, cells,includeOriginalCutCell = False):
+		#return all possible cells for recombination for two paths.
+		
+		possibleRecombinationCells= []
+		
+		shortestPath = paths[0]
+		#make sure shortest path comes first.
+		if len(paths[0])>len(paths[1]):
+			shortestPath =  paths[1]
+		
+		end = -1
+		if includeOriginalCutCell:
+			#if the end of the path is included, the cell where the path was cut (cutting cell) will be discovered again as recombination candidate
+			end= None
+		
+		#find the adjecent cells to the path
+		adjecentCells = []
+		previousNode=  shortestPath[0]
+		for node in shortestPath[1:end]:
+			adjecentCells.extend(self.find_adjecentCells_from_two_path_coords(node,previousNode,cells))
+			# print node
+			# print previousNode
+			# print '========'
+			previousNode= node
+			# pass
+		
+		#select only the "outside" cells
+		outsideAdjecentCells = [cell for cell in adjecentCells if cells[cell] == CELL_OUTSIDE]		
+		
+		#write down in lattice
+		for cell in outsideAdjecentCells:
+			cells[cell]= CELL_RECOMBINATION_CANDIDATE
+		return outsideAdjecentCells,cells
+	
+	# def recombine(paths, cell, cells):
+		# #assert two closed paths in arg. paths
+		# #connects paths at given cell
+		
+		# if 
+		
+		# nodeTopLeftPositionInPath = paths[0].index(cell)
+		# nodeBottomRightPositionInPath = path.index((splitCell[0]+1, splitCell[1]+1))
+		# #  drA, dcA,drB,dcB,drC,dcC in [(0,0,0,1,-1,0),(0,1,1,1,0,1),(1,1,1,0,1,0),(1,0,0,0,0,-1)]:
+		# #determine if vertical or horizontal
+		# neighbours = self.neighbours_on_hamilton_path(path, splitCell)
+		# #orthogonal neighbours of first node E and S
+		# #orthoNodesInLattice =  {(row,col+1),(row+1,col)} #create as set
+	
+		# pass
+		
+	# def split_search_return_one_neighbour_or_none(self,path, node):
+		# pass
+	
+	
 	
 	def neighbours_on_hamilton_path(self,path, node):
 		#assert path is hamilton path or cycle
@@ -258,16 +421,30 @@ class HamiltonFun:
 		for row in range(self.__rows - 1):
 			printrow = ""
 			for col in range(self.__cols - 1):
-				if cells[(row,col)] ==1:
+				if cells[(row,col)] ==CELL_INSIDE:
 					printrow += "X"
-				else:
+				elif cells [(row,col)] == CELL_SPLITPOINT_POTENTIAL:
+					printrow += "x"
+				elif cells [(row,col)] == CELL_OUTSIDE:
 					printrow += " "
+				elif cells [(row,col)] == CELL_SPLITPOINT:
+					printrow += "+"
+				elif cells [(row,col)] == CELL_RECOMBINATION_CANDIDATE:
+					printrow += "o"
+				else:
+					printrow += "?"
 			printcells += printrow + "\n"
 		print printcells
 		
 	def print_path_ASCII(self,path):
+		
+		self.print_paths_ASCII([path])
+	
+
+	def print_paths_ASCII(self,paths):
 		#from a list of vertices, and rows and cols, print path on screen
 		
+		#CREATE EMPTY LATTICE
 		#create row with points on each node
 		print_empty_row = self.__cols*"X"
 		print_empty_row = list(" ".join(print_empty_row))
@@ -282,19 +459,23 @@ class HamiltonFun:
 			latticeMinimalCoords.append(blankRowPrint[:])
 		latticeMinimalCoords.pop()
 		
-		#double all node(row,col)names to coords of path
-		path = [(2*r,2*c) for r,c in path]
-			
-		#fill lattice with path
-		previousNode = path[0]
-		for node in path[1:]:
 		
-			rowCoord = (previousNode[0] + node[0])/2
-			colCoord = (previousNode[1] + node[1])/2
-			latticeMinimalCoords[rowCoord][colCoord] = "X"
-			previousNode = node
+		#double all node(row,col)names to coords of path
+		#pathsDoubled = []
+		
+		paths = [[(2*r,2*c) for r,c in path] for path in paths]
+		
+		for path in paths:
+			#fill lattice with path
+			previousNode = path[0]
+			for node in path[1:]:
 			
-		#print empty lattice
+				rowCoord = (previousNode[0] + node[0])/2
+				colCoord = (previousNode[1] + node[1])/2
+				latticeMinimalCoords[rowCoord][colCoord] = "X"
+				previousNode = node
+				
+		#print lattice
 		for printrow in latticeMinimalCoords:
 			print "".join(printrow)
 
@@ -333,8 +514,17 @@ if __name__ == "__main__":
 	
 	print lattice.is_hamilton_cycle_existing()
 	path = lattice.set_up_first_cycle()
-	print lattice.find_split_cells(path)
+	cells,splitCells= lattice.find_split_cells(path)
+	print splitCells[0]
+	cells,splitPaths =  lattice.split(path, splitCells[0],cells)
+	lattice.print_paths_ASCII(splitPaths)
+	recombinationCandidates, cells = lattice.find_recombination_cells(splitPaths, cells)
+	
+	# lattice.recombine(splitPaths, recombinationCandidates[0], cells)
+	
+	lattice.print_cells_ASCII(cells)
+	
 	# cells = lattice.create_cell_pattern_from_hamilton_cycle(path)
 	#print_all_hamilton_paths(ROWS, COLS,(0,0),(2,3))
 	# print_all_hamilton_cycles_inefficient(ROWS, COLS)
-	# lattice.print_cells_ASCII(cells)
+	
