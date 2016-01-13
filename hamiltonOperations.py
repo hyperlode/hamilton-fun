@@ -72,8 +72,8 @@ class HamiltonFun:
 				
 			#check directions  nodeCell
 			# try:
-			pathNeighboursNodeA = self.neighbours_on_hamilton_path(path, nodeA)
-			# pathNeighboursNodeB = self.neighbours_on_hamilton_path(path, nodeB)
+			pathNeighboursNodeA = self.neighbours_on_cycle(path, nodeA)
+			# pathNeighboursNodeB = self.neighbours_on_cycle(path, nodeB)
 			
 			# print pathNeighboursNodeA
 			# print nodeB
@@ -116,7 +116,7 @@ class HamiltonFun:
 				orthoNodesInLattice =  {(row,col+1),(row+1,col)} #create as set
 				
 				#get neighbour nodes on path on top left node.
-				neighboursOnPathTopLeftNode =  self.neighbours_on_hamilton_path(path,(row,col))
+				neighboursOnPathTopLeftNode =  self.neighbours_on_cycle(path,(row,col))
 				
 				#------------------------
 				#there should be exactly one neighbour in the nodes to examine (E or S)
@@ -129,7 +129,7 @@ class HamiltonFun:
 					topLeftNodeConnectedNode = nodesPartOfTopLeftNodePath.pop()
 				#------------------------
 				#get neighbour nodes on path on bottom right node.
-				neighboursOnPathBottomRightNode =  self.neighbours_on_hamilton_path(path,(row+1,col+1))
+				neighboursOnPathBottomRightNode =  self.neighbours_on_cycle(path,(row+1,col+1))
 				
 				#there should be exactly one neighbour in the nodes to examine (E or S)
 				nodesPartOfBottomRightNodePath = neighboursOnPathBottomRightNode.intersection(orthoNodesInLattice)
@@ -158,34 +158,82 @@ class HamiltonFun:
 		nodeBottomRightPositionInPath = path.index((splitCell[0]+1, splitCell[1]+1))
 		#  drA, dcA,drB,dcB,drC,dcC in [(0,0,0,1,-1,0),(0,1,1,1,0,1),(1,1,1,0,1,0),(1,0,0,0,0,-1)]:
 		#determine if vertical or horizontal
-		neighbours = self.neighbours_on_hamilton_path(path, splitCell)
+		neighbours = self.neighbours_on_cycle(path, splitCell)
 		#orthogonal neighbours of first node E and S
 		#orthoNodesInLattice =  {(row,col+1),(row+1,col)} #create as set
 		
+		#preserve start and end node of path
+		startNode = path[0]
+		endNode = path[-2] #-2 because of loop (repetition)
+		
 		#save state of split cell
-		isVertical = False
+		isVertical = True
+		splitNodeB = (splitCell[0],splitCell[1]+1)
+		splitNodeA = (splitCell[0]+1,splitCell[1])
+		
 		if  (splitCell[0],splitCell[1]+1) in neighbours:
-			#horizontal to vertical
-			isVertical = True
+			#the connection is horizonal (col +1)
+			splitNodeA, splitNodeB = splitNodeB, splitNodeA
+			isVertical = False
+		# print "isVertical:{}".format(isVertical)
+		# #prepare split sequence
+		# if nodeTopLeftPositionInPath > nodeBottomRightPositionInPath:
+			# #exchange positions if sequence is not like we want.
+			# (nodeBottomRightPositionInPath, nodeTopLeftPositionInPath) = (nodeTopLeftPositionInPath, nodeBottomRightPositionInPath)
 		
-		#prepare split sequence
-		if nodeTopLeftPositionInPath > nodeBottomRightPositionInPath:
-			#exchange positions if sequence not like we want.
-			(nodeBottomRightPositionInPath, nodeTopLeftPositionInPath) = (nodeTopLeftPositionInPath, nodeBottomRightPositionInPath)
+		# #split paths
+		# splitA = [path[:nodeBottomRightPositionInPath], path[nodeBottomRightPositionInPath:]]
+		# splitTotal = [splitA[0][:nodeTopLeftPositionInPath:], splitA[0][nodeTopLeftPositionInPath:], splitA[1]]
 		
-		#split paths
-		splitA = [path[:nodeBottomRightPositionInPath], path[nodeBottomRightPositionInPath:]]
-		splitTotal = [splitA[0][:nodeTopLeftPositionInPath:], splitA[0][nodeTopLeftPositionInPath:], splitA[1]]
 		
-		#delete start and endpoint repetition from cycle
-		if splitTotal[0][0] == splitTotal[2][-1]:
-			splitTotal[2].pop() 
+		
+		
+		# #delete start and endpoint repetition from cycle
+		# if splitTotal[0][0] == splitTotal[2][-1]:
+			# splitTotal[2].pop() 
+		
+		# #create final paths as loops
+		# twoPaths =  [splitTotal[1]+[splitTotal[1][0]], splitTotal[2]+splitTotal[0] + [splitTotal[2][0]]]
+		
+		
+		twoPaths = self.__split_path_loop(path[:-1],splitCell,splitNodeA)
+		pathA = twoPaths[0]
+		pathB = twoPaths[1]
+		diagonalSplitNode = (splitCell[0]+1,splitCell[1]+1)
+		
+		if (diagonalSplitNode) not in pathA:
+			pathA,pathB = pathB,pathA
 			
-		twoPaths =  [splitTotal[1]+[splitTotal[1][0]], splitTotal[2]+splitTotal[0] + [splitTotal[2][0]]]
+		twoPaths = self.__split_path_loop(pathA,diagonalSplitNode,splitNodeB)
+		pathA = twoPaths[0]
+		pathC = twoPaths[1]
 		
+		paths = [pathA,pathB,pathC]
+		
+		startNodePath = None
+		endNodePath = None
+		completePath = None
+		for path in paths:
+			if startNode in path:
+				startNodePath = path
+			elif endNode in path:
+				endNodePath = path
+			else:
+				completePath = path
+				
+		if startNodePath is None or endNodePath is None or completePath is None:
+			print "ASSERT ERROR In paths"
 		cells[splitCell] = CELL_SPLITPOINT
+		return cells,[completePath + [completePath[0]], endNodePath + startNodePath + [endNodePath[0]]]
 		
-		return cells, twoPaths
+		#concatenate the two pieces that are one path
+		
+		
+		# twoPaths = [twoPaths[0] + [twoPaths[0][0]] , twoPaths[1] + [twoPaths[1][0]]]
+		
+		# 
+		
+		# return cells, twoPaths
 		# else:
 			# #vertical to horizontal
 	
@@ -289,29 +337,76 @@ class HamiltonFun:
 			cells[cell]= CELL_RECOMBINATION_CANDIDATE
 		return outsideAdjecentCells,cells
 	
-	# def recombine(paths, cell, cells):
-		# #assert two closed paths in arg. paths
-		# #connects paths at given cell
+	def __split_path_loop(self,path,splitA,splitB):
+		# splitNode and checkNode are neighbours (direction unknown)
+		# path = path[:-1]
 		
-		# if 
+		indexA = path.index(splitA)
+		indexB = path.index(splitB)
 		
-		# nodeTopLeftPositionInPath = paths[0].index(cell)
-		# nodeBottomRightPositionInPath = path.index((splitCell[0]+1, splitCell[1]+1))
-		# #  drA, dcA,drB,dcB,drC,dcC in [(0,0,0,1,-1,0),(0,1,1,1,0,1),(1,1,1,0,1,0),(1,0,0,0,0,-1)]:
-		# #determine if vertical or horizontal
-		# neighbours = self.neighbours_on_hamilton_path(path, splitCell)
-		# #orthogonal neighbours of first node E and S
-		# #orthoNodesInLattice =  {(row,col+1),(row+1,col)} #create as set
-	
-		# pass
+		if indexA > indexB:
+			indexA,indexB = indexB,indexA
+		
+		pathA = path[:indexA+1] #include splitNode
+		pathB = path[indexB:] #could be empty...
+		
+		return [pathA,pathB]
+		
+		
+	def recombine(self,paths, cell, cells):
+		#assert two closed paths in arg. paths
+		#connects paths at given cell
+		
+		#check if node (corresponding to cell (top left node of cell that is) is in first path, if not , switch
+		#assume cellId node is in pathA
+		pathA = paths[0]
+		pathB = paths[1]
+		if cell not in pathA:
+			pathB,pathA = pathA, pathB
+		
+		#
+		
+		#get position of nodes in paths
+		#nodeTopLeftPositionInPath = pathA.index(cell)
+		#nodeBottomRightPositionInPath = pathB.index((cell[0]+1, cell[1]+1))
+		
+		neighboursA = self.neighbours_on_cycle(pathA, cell)
+		
+		topLeftNeighBour = (cell[0],cell[1]+1) #assumehorizontal connection
+		isHorizontal = True
+		if (cell[0]+1,cell[1]) in neighboursA:
+			topLeftNeighBour = (cell[0]+1,cell[1])
+			isHorizontal = False
+		pathA1, pathA2 = self.__split_path_loop(pathA[:-1], cell, topLeftNeighBour )
+		
+		pathA = pathA2 + pathA1
+		
+		if isHorizontal:
+			pathB1, pathB2 = self.__split_path_loop(pathB[:-1], cell, (cell[0]+1, cell[1]))
+			
+		else:
+			# print pathB
+			# print (cell[0]+1, cell[1]+1)
+			# print (cell[0], cell[1]+1)
+			pathB1, pathB2 = self.__split_path_loop(pathB[:-1], (cell[0]+1, cell[1]+1), (cell[0], cell[1]+1))
+		
+		pathB = pathB2 + pathB1
+		
+		#generate new cells from path
+		recombined = pathA + pathB + [pathA[0]]
+		cells = self.create_cell_pattern_from_hamilton_cycle(recombined)
+		return recombined, cells
+			
+		
+		
 		
 	# def split_search_return_one_neighbour_or_none(self,path, node):
 		# pass
 	
 	
 	
-	def neighbours_on_hamilton_path(self,path, node):
-		#assert path is hamilton path or cycle
+	def neighbours_on_cycle(self,path, node):
+		#assert path is cycle (last element equals first in path)
 		
 		#get index of node in path
 		pos = path.index(node)
@@ -501,7 +596,7 @@ def print_all_paths(lattice, paths):
 		print "\n"
 		
 if __name__ == "__main__":
-	ROWS = 5
+	ROWS = 4
 	COLS = 6
 	
 	lattice = HamiltonFun(ROWS, COLS)
@@ -513,16 +608,23 @@ if __name__ == "__main__":
 	
 	
 	print lattice.is_hamilton_cycle_existing()
-	path = lattice.set_up_first_cycle()
-	cells,splitCells= lattice.find_split_cells(path)
-	print splitCells[0]
-	cells,splitPaths =  lattice.split(path, splitCells[0],cells)
-	lattice.print_paths_ASCII(splitPaths)
-	recombinationCandidates, cells = lattice.find_recombination_cells(splitPaths, cells)
+	tttttpath = lattice.set_up_first_cycle()
+	tttttcells,splitCells= lattice.find_split_cells(tttttpath)
+	print "with potentials:"
+	lattice.print_cells_ASCII(tttttcells)
+	# splitCell = (1,0)
 	
-	# lattice.recombine(splitPaths, recombinationCandidates[0], cells)
-	
-	lattice.print_cells_ASCII(cells)
+	for splitCell in splitCells:
+		print "splitcell: {}".format(splitCell)
+		cells,splitPaths =  lattice.split(tttttpath[:], splitCell ,tttttcells.copy())
+		lattice.print_cells_ASCII(cells)
+		lattice.print_paths_ASCII(splitPaths)
+		recombinationCandidates, cells = lattice.find_recombination_cells(splitPaths, cells)
+		lattice.print_cells_ASCII(cells)
+		
+		for cand in recombinationCandidates:
+			path, cells =  lattice.recombine(splitPaths, cand, cells)
+			lattice.print_cells_ASCII(cells)
 	
 	# cells = lattice.create_cell_pattern_from_hamilton_cycle(path)
 	#print_all_hamilton_paths(ROWS, COLS,(0,0),(2,3))
