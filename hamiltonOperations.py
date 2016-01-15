@@ -594,7 +594,40 @@ def print_all_paths(lattice, paths):
 	for path in paths:
 		lattice.print_path_ASCII(path)
 		print "\n"
+
 		
+def getNeighbours( path,rows, cols,verbose = False):
+	lattice = HamiltonFun(rows, cols)
+	tttttcells,splitCells= lattice.find_split_cells(path)
+	if verbose:
+		print "with potentials:"
+		lattice.print_cells_ASCII(tttttcells)
+
+	neighbours = []
+	
+	for splitCell in splitCells:
+		if verbose:
+			print "splitcell: {}".format(splitCell)
+		cells,splitPaths =  lattice.split(tttttpath[:], splitCell ,tttttcells.copy())
+		
+		if verbose:
+			lattice.print_cells_ASCII(cells)
+			lattice.print_paths_ASCII(splitPaths)
+		
+		recombinationCandidates, cells = lattice.find_recombination_cells(splitPaths, cells)
+		
+		if verbose:
+			lattice.print_cells_ASCII(cells)
+		
+		
+		for cand in recombinationCandidates:
+			path, cells =  lattice.recombine(splitPaths, cand, cells)
+			neighbours.append(path)
+			if verbose:
+				lattice.print_cells_ASCII(cells)
+	
+	return neighbours
+	
 if __name__ == "__main__":
 	ROWS = 4
 	COLS = 6
@@ -609,23 +642,8 @@ if __name__ == "__main__":
 	
 	print lattice.is_hamilton_cycle_existing()
 	tttttpath = lattice.set_up_first_cycle()
-	tttttcells,splitCells= lattice.find_split_cells(tttttpath)
-	print "with potentials:"
-	lattice.print_cells_ASCII(tttttcells)
-	# splitCell = (1,0)
-	
-	for splitCell in splitCells:
-		print "splitcell: {}".format(splitCell)
-		cells,splitPaths =  lattice.split(tttttpath[:], splitCell ,tttttcells.copy())
-		lattice.print_cells_ASCII(cells)
-		lattice.print_paths_ASCII(splitPaths)
-		recombinationCandidates, cells = lattice.find_recombination_cells(splitPaths, cells)
-		lattice.print_cells_ASCII(cells)
-		
-		for cand in recombinationCandidates:
-			path, cells =  lattice.recombine(splitPaths, cand, cells)
-			lattice.print_cells_ASCII(cells)
-	
+	for path in getNeighbours(tttttpath,ROWS,COLS, True	):
+		print path
 	# cells = lattice.create_cell_pattern_from_hamilton_cycle(path)
 	#print_all_hamilton_paths(ROWS, COLS,(0,0),(2,3))
 	# print_all_hamilton_cycles_inefficient(ROWS, COLS)
