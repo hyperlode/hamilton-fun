@@ -3,11 +3,7 @@ import fileOperations
 import random
 from collections import defaultdict
 
-CELL_INSIDE = 0
-CELL_OUTSIDE = 1 
-CELL_SPLITPOINT_POTENTIAL = 2
-CELL_SPLITPOINT = 3
-CELL_RECOMBINATION_CANDIDATE = 4
+
 
 
 class Lattice:
@@ -15,8 +11,8 @@ class Lattice:
 		""" initializes a graph object """
 		self.__rows = lattice_rows
 		self.__cols = lattice_cols
-		self.__rowCells = self.__rows-1
-		self.__colCells = self.__cols-1
+		# self.__rowCells = self.__rows-1
+		# self.__colCells = self.__cols-1
 		self.__latticeGraphDict = {}
 		self.__create_lattice_graph_dict()
 		self.__latticeGraph = graphs.Graph(self.__latticeGraphDict)
@@ -30,7 +26,10 @@ class Lattice:
 		# self.__neighbourCycles = []
 		# self.__splitCells = []
 	
-	
+	def rows(self):
+		return self.__rows
+	def cols(self):
+		return self.__cols
 	def __create_lattice_graph_dict(self):
 		#def latticeGraphDictGenerator(self):
 		#of this type, where the node name is a coordinate: (row,col)
@@ -87,7 +86,9 @@ class Lattice:
 			neighbours.append((cell[0]-1,cell[1]) )	
 			
 		return neighbours
-	
+	def stats(self):
+		return self.__classification
+		
 	def new_paths_to_lattice(self,paths):
 		#feed with single path as a list, or a list of paths.  paths can be cycles or paths.
 		self.__paths = []
@@ -174,7 +175,8 @@ class Lattice:
 		return not classification["error"]
 	
 	def __str__(self):
-		return str(self.__classification)
+		return fileOperations.dictToString(self.__classification)
+		# return str(self.__classification)
 	
 	def string_from_paths(self):
 	
@@ -214,7 +216,6 @@ class Lattice:
 				colCoord = (previousNode[1] + node[1])/2
 				latticeMinimalCoords[rowCoord][colCoord] = "X"
 				previousNode = node
-				print node
 		#print lattice
 		for printrow in latticeMinimalCoords:
 			print "".join(printrow)
@@ -239,7 +240,7 @@ if __name__== "__main__":
 	path = [ (3, 0), (2, 0), (2, 1),(3,1),(3,0)],[ (3, 4), (3,5), (2, 5), (1, 5), (0, 5), (0, 4), (1, 4), (2, 4), (2, 3)],[(1, 3), (0,3), (0, 2), (0, 1), (0, 0), (1, 0), (1, 1), (1, 2), (2, 2)]    #two paths , one cycle   not all nodes visited
 	path = [ (3, 0), (2, 0), (2, 1),(3,1),(3,0)],[ (3, 4), (3,5), (2, 5), (1, 5), (0, 5),  (1, 4), (2, 4), (2, 3)],[(1, 3), (0,3), (0, 2), (0, 1), (0, 0), (1, 0), (1, 1), (1, 2), (2, 2)]    #two paths , one cycle   not all nodes visited   neighbour missing
 	path = [ (3, 0), (2, 0), (2, 1),(3,1),(3,0)],[ (3, 4), (3,5), (2, 5), (1, 5), (0, 5), (0, 4), (1, 4), (2, 4), (2, 3)],[(1, 3), (0,3), (0, 2), (0, 1), (0, 0), (1, 0), (10, 1), (1, 2), (2, 2)]    #two paths , one cycle   not all nodes visited, non existing node
-	path = [ (2, 1), (2, 0), (3, 0),(3,1),(3, 2), (3, 3), (3, 4), (3,5), (2, 5), (1, 5), (0, 5), (0, 4), (1, 4), (2, 4), (2, 3), (1, 3), (0,3), (0, 2), (0, 1), (0, 0), (1, 0), (1, 1), (1, 2), (2, 2),(2,1)]    #hamilton cycle
+	
 	print len(path)
 	print test.new_paths_to_lattice(path)
 	print test.string_from_paths()
