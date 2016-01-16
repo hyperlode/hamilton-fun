@@ -9,6 +9,7 @@ CELL_SPLITPOINT_POTENTIAL = 2
 CELL_SPLITPOINT = 3
 CELL_RECOMBINATION_CANDIDATE = 4
 
+
 class HamiltonFun:
 	def __init__(self, lattice_rows, lattice_cols):
 		""" initializes a graph object """
