@@ -219,6 +219,7 @@ class Lattice:
 		#print lattice
 		for printrow in latticeMinimalCoords:
 			print "".join(printrow)
+		print "\n"
 
 # class HamiltonCycle():
 	

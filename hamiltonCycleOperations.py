@@ -1,4 +1,5 @@
 import latticeOperations
+import twoCyclesCoverAllPointsInLatticeOperations
 
 CELL_INSIDE = 0
 CELL_OUTSIDE = 1 
@@ -19,11 +20,13 @@ class HamiltonCycle():
 			
 		self.addCycle(cycle) 
 		#from here cycle is asserted to be hamilton
+		self.__cells_extra_info = {}
 		self.__cells = {}
+		
 		self.__cycle = cycle 
 		
 		self.__splitCells = [] #all the potential splitting points.
-		self.__splitPaths = [] #all the potential splitting points.
+		self.__splitPathsData = [] 
 		
 	def __str__(self):
 		self.__lattice.string_from_paths()
@@ -36,8 +39,8 @@ class HamiltonCycle():
 		if not stats["hamilton"] or stats["cycles"]!=1:
 			print self
 			raise Exception("no hamilton path provided")
-	def get_split_paths(self):
-		return self.__splitPaths
+	def get_split_pathsData(self):
+		return self.__splitPathsData
 		
 	def create_cell_pattern_from_hamilton_cycle(self):
 		#if a cycle is drawn, there is an inside and an outside. 
@@ -46,12 +49,13 @@ class HamiltonCycle():
 		#default all cells are outside path
 		self.__cells = {(r,c):CELL_OUTSIDE for r in range(self.__lattice.rows()-1) for c in range(self.__lattice.cols()-1)}
 		try:
-			self.__explore_inside_of__hamilton_cycle((0,0)) 
+			self.__explore_inside_of_hamilton_cycle((0,0)) 
 		except:
 			print "creation of cells failed"
 			raise
+		self.__cells_extra_info = self.__cells.copy()
 	
-	def __explore_inside_of__hamilton_cycle (self, nodeCell):
+	def __explore_inside_of_hamilton_cycle (self, nodeCell):
 		#every cell has four directions, N, E, S, W . inside cells are all connected. Go over inside recursively
 		#add nodeCell as inside in cells
 		self.__cells[nodeCell] = CELL_INSIDE
@@ -77,7 +81,7 @@ class HamiltonCycle():
 			if nodeB not in pathNeighboursNodeA: #	or nodeA in pathNeighB
 				#if there is not path from A to B, then, the cells are connected
 				#go explore the neighbour
-				self.__explore_inside_of__hamilton_cycle( nextNodeCell )
+				self.__explore_inside_of_hamilton_cycle( nextNodeCell )
 
 	def neighbours_of_node(self, node):
 		#from old neighbours_on_cycle in first program.
@@ -104,20 +108,26 @@ class HamiltonCycle():
 			neighboursOnPath.add(path[1]) #second element of list
 		return neighboursOnPath
 		
-	def print_cells_ASCII(self):
+	def print_cells_ASCII(self, withExtraInfo = True):
+		
+		if withExtraInfo:
+			cells = self.__cells_extra_info
+		else:
+			cells = self.__cells
+		
 		printcells = ""
 		for row in range(self.__lattice.rows() - 1):
 			printrow = ""
 			for col in range(self.__lattice.cols() - 1):
-				if self.__cells[(row,col)] ==CELL_INSIDE:
+				if cells[(row,col)] ==CELL_INSIDE:
 					printrow += "X"
-				elif self.__cells [(row,col)] == CELL_SPLITPOINT_POTENTIAL:
+				elif cells [(row,col)] == CELL_SPLITPOINT_POTENTIAL:
 					printrow += "x"
-				elif self.__cells [(row,col)] == CELL_OUTSIDE:
+				elif cells [(row,col)] == CELL_OUTSIDE:
 					printrow += " "
-				elif self.__cells [(row,col)] == CELL_SPLITPOINT:
+				elif cells [(row,col)] == CELL_SPLITPOINT:
 					printrow += "+"
-				elif self.__cells [(row,col)] == CELL_RECOMBINATION_CANDIDATE:
+				elif cells [(row,col)] == CELL_RECOMBINATION_CANDIDATE:
 					printrow += "o"
 				else:
 					printrow += "?"
@@ -130,9 +140,18 @@ class HamiltonCycle():
 	
 	def find_all_neighbour_hamilton_cycles(self):
 		self.find_split_cells()
-		self.print_cells_ASCII()
+		self.print_cells_ASCII(True)
 		for cell in self.__splitCells:
 			self.split(cell)
+			
+				
+		for splitPath in cycle.get_split_pathsData():
+			twoLoops = twoCyclesCoverAllPointsInLatticeOperations.TwoCycles(self.__lattice.rows(), self.__lattice.cols(),splitPath["paths"],splitPath["cells"],splitPath["splitCell"])
+			twoLoops.print_cells_ASCII()
+			# checkPath.new_paths_to_lattice(splitPath["paths"])
+			# checkPath.string_from_paths()		
+		
+		
 	
 	def find_split_cells(self):
 		#find all potential split cells in path or cycle.  
@@ -190,7 +209,7 @@ class HamiltonCycle():
 					splitCells.append((row,col))
 		#indicate splitcells in cells
 		for cell in splitCells:
-			self.__cells[cell] = CELL_SPLITPOINT_POTENTIAL 
+			self.__cells_extra_info[cell] = CELL_SPLITPOINT_POTENTIAL 
 		
 		self.__splitCells = splitCells
 	
@@ -253,17 +272,13 @@ class HamiltonCycle():
 		if len(startNodePath)==0  or len(endNodePath)==0 or len(middlePath)==0:
 			print "ASSERT ERROR In paths"
 			
-		 
-		# cells[splitCell] = CELL_SPLITPOINT
 		
-		#
-		self.__splitPaths.append([middlePath + [middlePath[0]], endNodePath + startNodePath + [endNodePath[0]]])
-		
-		# if (len(middlePath) == 0):
-		# #perfect split when splitnodes where first and last element on given path
-			# return cells, [startNodePath + [startNodePath[0]], endNodePath + [endNodePath[0]]]
-		# else:
-			# return cells,[middlePath + [middlePath[0]], endNodePath + startNodePath + [endNodePath[0]]]
+		cellsWithSplitpoint = self.__cells.copy()
+		cellsWithSplitpoint[splitCell] = CELL_SPLITPOINT
+
+		self.__splitPathsData.append({"cells": cellsWithSplitpoint, "splitCell": splitCell, "paths":[middlePath + [middlePath[0]], endNodePath + startNodePath + [endNodePath[0]]]})
+	
+	
 	
 def split_path_at_two_neighbours(path,splitA,splitB):
 	#old  __split_path_loop
@@ -315,12 +330,8 @@ if __name__== "__main__":
 	cycle.find_all_neighbour_hamilton_cycles()
 	# print vars(cycle)["_HamiltonCycle__lattice"]
 	
-	checkPath = latticeOperations.Lattice(ROWS,COLS)
-	for splitPath in cycle.get_split_paths():
-		checkPath.new_paths_to_lattice(splitPath)
-		checkPath.string_from_paths()
-		
-		print splitPath
+	# checkPath = latticeOperations.Lattice(ROWS,COLS)
+	
 		
 		
 	print cycle
