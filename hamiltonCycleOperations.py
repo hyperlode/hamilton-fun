@@ -28,6 +28,7 @@ class HamiltonCycle():
 		self.__splitCells = [] #all the potential splitting points.
 		self.__splitPathsData = [] 
 		
+		
 	def __str__(self):
 		self.__lattice.string_from_paths()
 		return str(self.__lattice)
@@ -147,12 +148,13 @@ class HamiltonCycle():
 				
 		for splitPath in cycle.get_split_pathsData():
 			twoLoops = twoCyclesCoverAllPointsInLatticeOperations.TwoCycles(self.__lattice.rows(), self.__lattice.cols(),splitPath["paths"],splitPath["cells"],splitPath["splitCell"])
+			
+			twoLoops.find_recombination_cells()
 			twoLoops.print_cells_ASCII()
+			print"----"
 			# checkPath.new_paths_to_lattice(splitPath["paths"])
 			# checkPath.string_from_paths()		
 		
-		
-	
 	def find_split_cells(self):
 		#find all potential split cells in path or cycle.  
 		#  cell (0,0) with its corner nodes:
