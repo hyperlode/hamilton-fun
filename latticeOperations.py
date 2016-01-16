@@ -92,23 +92,23 @@ class Lattice:
 		#feed with single path as a list, or a list of paths.  paths can be cycles or paths.
 		self.__paths = []
 		
+		#convert to double list if single path given.
 		if not isinstance(paths[0], list):
 			paths = [paths]
-			print paths 
-		
+			
 		if self.checkAndClassifyPaths(paths):
 			self.__paths = paths
-		
-		
-		
-		pass
+		else:
+			#given path not valid
+			raise
+		return 
 	
 	def checkAndClassifyPaths(self, paths):
 		
 		#not tested for this lattice, only if it "could" fit in this lattice. 
 		#multiple paths should not overlap. paths can be path or cycle. individual path should not overlap. every element of path should go to neighbour.
 		
-		classification = {"cycles":0, "numberOfPaths":0, "hamilton":False,"error":False,"visitedNodes":0}
+		classification = {"cycles":0, "numberOfPaths":0, "hamilton":False,"error":False,"visitedNodes":0,"allNodesVisited":False}
 		
 		visitedNodes = []
 		
@@ -118,67 +118,63 @@ class Lattice:
 		#number of loops
 		for path in paths:
 		
-			nodes = path
+			
 			#check if paths are loops
 			if path[0] == path[-1]:
 				classification["cycles"] += 1
-				nodes = path[:-1]
-			#add all visited nodes
-			visitedNodes.extend(nodes)
-				
-			#check if valid neighbours
-			previousNode = nodes[0]
-			classification["visitedNodes"] += 1
-			print previousNode
-				
-			for node in nodes[1:]:
+				classification["visitedNodes"] += len(path)-1 #cycle has repetition of beginning node on end (don't count twice)
+				visitedNodes.extend(path[:-1])
+			else:
+				classification["visitedNodes"] += len(path)  
+				visitedNodes.extend(path)		#add all visited nodes
+			
+			#check if valid neighbours in node string
+			previousNode = path[0]
+			
+			for node in path[1:]:
 				
 				if node not in self.find_neighbour_nodes(previousNode):
-					classification["error"] == "node {} not neighbour of {} in path".format(str(node),str(previousNode))
-					print node
-					print self.find_neighbour_nodes(node)
-					raise
+					classification["error"] = "node {} not neighbour of {} in path".format(str(node),str(previousNode))
+					print self.find_neighbour_nodes(previousNode)
+					print classification
+					print path
+					
+					raise Exception("no valid neighbour, does node exists anyways? see error in classification dict")
 				previousNode = node
 				#add 1 to number of nodes visited
-				print node
-				classification["visitedNodes"] += 1
+				
+				
 			
-		#check if nodes are visited twice
+		#check if nodes are visited multiple times
 		if len(visitedNodes) != len(set(visitedNodes)):
 			classification["error"] = "nodes are visited multiple times"
 			print paths
 			print classification
-			raise
+			raise Exception ("nodes visited multiple times")
 		
 		#check if not too many nodes are visited
 		if classification["visitedNodes"] > self.__rows * self.__cols :
 			classification["error"] = "too many nodes visited number of nodes visited: {}".format(classification["visitedNodes"])
 			print paths
-			raise
+			print classification
+			raise Exception ("too many nodes visited")
 			
+		#check if all nodes are visited
+		if classification["visitedNodes"] == self.__rows * self.__cols:
+			classification["allNodesVisited"] = True
+		
 		#check if Hamilton path or Cycle
-		if classification["visitedNodes"] == self.__rows * self.__cols and classification["numberOfPaths"] == 1:
-			classification["hamilton"] == True
+		if classification["allNodesVisited"] and classification["numberOfPaths"] == 1:
+			classification["hamilton"] = True
+			
 		
 		
 		self.__classification = classification
 
 		return not classification["error"]
-		
-	def type_of_lattice(self):
-		#return type of path filling
-		
-		
-		paths = self.__paths
-		if len(paths) == 1:
-			path = paths[0]
-			
-			
-			
-			
-		else:
-			pass
-		
+	
+	def __str__(self):
+		return str(self.__classification)
 	
 	def string_from_paths(self):
 	
@@ -208,24 +204,43 @@ class Lattice:
 		paths = [[(2*r,2*c) for r,c in path] for path in paths]
 		
 		for path in paths:
+			# print path
 			#fill lattice with path
 			previousNode = path[0]
+			# print previousNode
 			for node in path[1:]:
 			
 				rowCoord = (previousNode[0] + node[0])/2
 				colCoord = (previousNode[1] + node[1])/2
 				latticeMinimalCoords[rowCoord][colCoord] = "X"
 				previousNode = node
-				
+				print node
 		#print lattice
 		for printrow in latticeMinimalCoords:
 			print "".join(printrow)
+
+# class HamiltonCycle():
+	
+	
+
+
 			
 if __name__== "__main__":
 	test = Lattice(4,6)
 	# path = [ (2, 1), (2, 0), (3, 0),(3, 1), (3, 2), (3, 3), (3, 4), (3,5), (2, 5), (1, 5), (0, 5), (0, 4), (1, 4), (2, 4), (2, 3), (1, 3), (0,3), (0, 2), (0, 1), (0, 0), (1, 0), (1, 1), (1, 2), (2, 2), (2,1)]
 	path = [ (2, 1), (2, 0), (3, 0),(2,1)],[(3, 1), (3, 2), (3, 3), (3, 4), (3,5), (2, 5), (1, 5), (0, 5), (0, 4), (1, 4), (2, 4), (2, 3), (1, 3), (0,3), (0, 2), (0, 1), (0, 0), (1, 0), (1, 1), (1, 2), (2, 2), (2,1),(3,1)] #(2,1) node at end multiple visits
-	path = [ (2, 1), (2, 0), (3, 0),(2,1)],[(3, 1), (3, 2), (3, 3), (3, 4), (3,5), (2, 5), (1, 5), (0, 5), (0, 4), (1, 4), (2, 4), (2, 3), (1, 3), (0,3), (0, 2), (0, 1), (0, 0), (1, 0), (1, 1), (1, 2), (2, 2),(3,1)]
+	path = [ (2, 1), (2, 0), (3, 0),(2,1)],[(3, 1), (3, 2), (3, 3), (3, 4), (3,5), (2, 5), (1, 5), (0, 5), (0, 4), (1, 4), (2, 4), (2, 3), (1, 3), (0,3), (0, 2), (0, 1), (0, 0), (1, 0), (1, 1), (1, 2), (2, 2),(3,1)]    #invalid path, has diagonal in loops...
+	path = [ (2, 1), (2, 0), (3, 0),(3,1),(2,1)],[(3, 2), (3, 3), (3, 4), (3,5), (2, 5), (1, 5), (0, 5), (0, 4), (1, 4), (2, 4), (2, 3), (1, 3), (0,3), (0, 2), (0, 1), (0, 0), (1, 0), (1, 1), (1, 2), (2, 2),(3,2)]    #valid path
+	path = [ (2, 1), (2, 0), (3, 0),(3,1),(3, 2), (3, 3), (3, 4), (3,5), (2, 5), (1, 5), (0, 5), (0, 4), (1, 4), (2, 4), (2, 3), (1, 3), (0,3), (0, 2), (0, 1), (0, 0), (1, 0), (1, 1), (1, 2), (2, 2),(2,1)]    #hamilton cycle
+	path = [ (2, 1), (2, 0), (3, 0),(3,1),(3, 2), (3, 3), (3, 4), (3,5), (2, 5), (1, 5), (0, 5), (0, 4), (1, 4), (2, 4), (2, 3), (1, 3), (0,3), (0, 2), (0, 1), (0, 0), (1, 0), (1, 1), (1, 2), (2, 2)]    #hamilton path
+	path = [ (2, 1), (2, 0), (3, 0),(3,1),(3, 2), (3, 3), (3, 4), (3,5), (2, 5), (1, 5), (0, 5), (0, 4), (1, 4), (2, 4), (2, 3)],[(1, 3), (0,3), (0, 2), (0, 1), (0, 0), (1, 0), (1, 1), (1, 2), (2, 2)]    #two paths
+	path = [ (3, 0), (2, 0), (2, 1) ],[(3,1),(3, 2), (3, 3), (3, 4), (3,5), (2, 5), (1, 5), (0, 5), (0, 4), (1, 4), (2, 4), (2, 3)],[(1, 3), (0,3), (0, 2), (0, 1), (0, 0), (1, 0), (1, 1), (1, 2), (2, 2)]    #three paths, one inverted direction
+	path = [ (3, 0), (2, 0), (2, 1),(3,1),(3,0)],[(3, 2), (3, 3), (3, 4), (3,5), (2, 5), (1, 5), (0, 5), (0, 4), (1, 4), (2, 4), (2, 3)],[(1, 3), (0,3), (0, 2), (0, 1), (0, 0), (1, 0), (1, 1), (1, 2), (2, 2)]    #two paths , one cycle
+	path = [ (3, 0), (2, 0), (2, 1),(3,1),(3,0)],[ (3, 4), (3,5), (2, 5), (1, 5), (0, 5), (0, 4), (1, 4), (2, 4), (2, 3)],[(1, 3), (0,3), (0, 2), (0, 1), (0, 0), (1, 0), (1, 1), (1, 2), (2, 2)]    #two paths , one cycle   not all nodes visited
+	path = [ (3, 0), (2, 0), (2, 1),(3,1),(3,0)],[ (3, 4), (3,5), (2, 5), (1, 5), (0, 5),  (1, 4), (2, 4), (2, 3)],[(1, 3), (0,3), (0, 2), (0, 1), (0, 0), (1, 0), (1, 1), (1, 2), (2, 2)]    #two paths , one cycle   not all nodes visited   neighbour missing
+	path = [ (3, 0), (2, 0), (2, 1),(3,1),(3,0)],[ (3, 4), (3,5), (2, 5), (1, 5), (0, 5), (0, 4), (1, 4), (2, 4), (2, 3)],[(1, 3), (0,3), (0, 2), (0, 1), (0, 0), (1, 0), (10, 1), (1, 2), (2, 2)]    #two paths , one cycle   not all nodes visited, non existing node
+	path = [ (2, 1), (2, 0), (3, 0),(3,1),(3, 2), (3, 3), (3, 4), (3,5), (2, 5), (1, 5), (0, 5), (0, 4), (1, 4), (2, 4), (2, 3), (1, 3), (0,3), (0, 2), (0, 1), (0, 0), (1, 0), (1, 1), (1, 2), (2, 2),(2,1)]    #hamilton cycle
 	print len(path)
 	print test.new_paths_to_lattice(path)
 	print test.string_from_paths()
+	print str(test)
