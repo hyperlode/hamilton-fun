@@ -9,6 +9,14 @@ CELL_RECOMBINATION_CANDIDATE = 4
 class HamiltonCycle():
 	def __init__(self, lattice_rows, lattice_cols, cycle):
 		self.__lattice = latticeOperations.Lattice(lattice_rows, lattice_cols)
+		
+		#let path start from (0,0)  here we don't yet really check for hamilton, but if error, we know it is wrong already
+		try:
+			cycle = standardized_hamilton_cycle(cycle)
+		except:
+			print "make sure to provide a single hamilton cycle"
+			raise 
+			
 		self.addCycle(cycle) 
 		#from here cycle is asserted to be hamilton
 		self.__cells = {}
@@ -26,11 +34,6 @@ class HamiltonCycle():
 			print self
 			raise Exception("no hamilton path provided")
 	
-	def cycleAsCells(self):
-		pass
-	
-	
-	
 	def create_cell_pattern_from_hamilton_cycle(self):
 		#if a cycle is drawn, there is an inside and an outside. 
 		#each four points of the lattice define a cell. This cell is in or outside the cycle.
@@ -40,10 +43,8 @@ class HamiltonCycle():
 		try:
 			self.__explore_inside_of__hamilton_cycle((0,0)) 
 		except:
+			print "creation of cells failed"
 			raise
-			# raise Exception("creation of cells failed")
-	
-	
 	
 	def __explore_inside_of__hamilton_cycle (self, nodeCell):
 		#every cell has four directions, N, E, S, W . inside cells are all connected. Go over inside recursively
@@ -69,15 +70,10 @@ class HamiltonCycle():
 			pathNeighboursNodeA = self.neighbours_of_node( nodeA)
 			
 			if nodeB not in pathNeighboursNodeA: #	or nodeA in pathNeighB
-				#for every neighbour go in!
+				#if there is not path from A to B, then, the cells are connected
+				#go explore the neighbour
 				self.__explore_inside_of__hamilton_cycle( nextNodeCell )
-			else:
-				#raise Exception("assert graph boundaries passed")
-				# #assert graph boundaries passed...
-				# # print "boundary"
-				# # print nodeCell
-				pass
-		
+
 	def neighbours_of_node(self, node):
 		#from old neighbours_on_cycle in first program.
 		#get the cycle
@@ -123,9 +119,22 @@ class HamiltonCycle():
 			printcells += printrow + "\n"
 		print printcells
 
+def standardized_hamilton_cycle(path):
+	#assert hamilton cycle with (row,col) tuples, first and last tuple equal
+	#so it always starts with (0,0) and ends with (0,0)
+	
+	if path[0] ==(0,0):
+		return path
+	else:
+		path = path[:-1]
+		i = path.index((0,0))
+		return path[i:]+ path[:i] +[(0,0)]
+		
+		
 if __name__== "__main__":
 	path = [ (2, 1), (2, 0), (3, 0),(3,1),(3, 2), (3, 3), (3, 4), (3,5), (2, 5), (1, 5), (0, 5), (0, 4), (1, 4), (2, 4), (2, 3), (1, 3), (0,3), (0, 2), (0, 1), (0, 0), (1, 0), (1, 1), (1, 2), (2, 2),(2,1)]    #hamilton cycle
 	# path = [ (2, 1), (2, 0), (3, 0),(3,1)],[(3, 2), (3, 3), (3, 4), (3,5), (2, 5), (1, 5), (0, 5), (0, 4), (1, 4), (2, 4), (2, 3), (1, 3), (0,3), (0, 2), (0, 1), (0, 0), (1, 0), (1, 1), (1, 2), (2, 2)]    #valid paths
+	
 	cycle = HamiltonCycle(4,6,path)
 	cycle.create_cell_pattern_from_hamilton_cycle()
 	# print vars(cycle)["_HamiltonCycle__lattice"]
