@@ -23,6 +23,7 @@ class HamiltonCycle():
 		self.__cycle = cycle 
 		
 		self.__splitCells = [] #all the potential splitting points.
+		self.__splitPaths = [] #all the potential splitting points.
 		
 	def __str__(self):
 		self.__lattice.string_from_paths()
@@ -35,7 +36,9 @@ class HamiltonCycle():
 		if not stats["hamilton"] or stats["cycles"]!=1:
 			print self
 			raise Exception("no hamilton path provided")
-	
+	def get_split_paths(self):
+		return self.__splitPaths
+		
 	def create_cell_pattern_from_hamilton_cycle(self):
 		#if a cycle is drawn, there is an inside and an outside. 
 		#each four points of the lattice define a cell. This cell is in or outside the cycle.
@@ -128,6 +131,8 @@ class HamiltonCycle():
 	def find_all_neighbour_hamilton_cycles(self):
 		self.find_split_cells()
 		self.print_cells_ASCII()
+		for cell in self.__splitCells:
+			self.split(cell)
 	
 	def find_split_cells(self):
 		#find all potential split cells in path or cycle.  
@@ -188,7 +193,103 @@ class HamiltonCycle():
 			self.__cells[cell] = CELL_SPLITPOINT_POTENTIAL 
 		
 		self.__splitCells = splitCells
+	
+	
+	def split(self, splitCell):
+		#splitcell is also a coordinate on the cycle (left up coordinate of cell equals path coordinate)
+		#split the path in two at splitcell
 		
+		# nodeTopLeftPositionInPath = path.index(splitCell)
+		# nodeBottomRightPositionInPath = path.index((splitCell[0]+1, splitCell[1]+1))
+		
+		
+		neighbours = self.neighbours_of_node( splitCell)
+		
+		
+		#take the opposite node of splitcell 
+		diagonalSplitNode = (splitCell[0]+1,splitCell[1]+1)
+		#splitNode is same as splitcell
+		
+		
+		#look if the splitcell has horizontal or vertical neighbours , define the path neighbours of the split node and of the diagonal split node
+		isVertical = True #vertical means: 1 inside cell above, and one down of the splitcell.
+		splitNodeNoneNeighbourOnPath = (splitCell[0],splitCell[1]+1)
+		splitNodeNeighbourOnPathOfSplitcellNode = (splitCell[0]+1,splitCell[1])
+		
+		if  (splitNodeNoneNeighbourOnPath) in neighbours:
+			splitNodeNeighbourOnPathOfSplitcellNode, splitNodeNoneNeighbourOnPath = splitNodeNoneNeighbourOnPath, splitNodeNeighbourOnPathOfSplitcellNode
+			isVertical = False
+		
+		#do the splitting of the cycle at the split node
+		twoPaths = split_path_at_two_neighbours(self.__cycle[:],splitCell,splitNodeNeighbourOnPathOfSplitcellNode)
+		#if the two nodes are front and end, one of the returning paths will be empty.
+		pathA = twoPaths[0]
+		pathB = twoPaths[1]
+		
+		#make sure diagonal is in next path to split.
+		if (diagonalSplitNode) not in pathA:
+			pathA,pathB = pathB,pathA
+		paths = split_path_at_two_neighbours(pathA[:],diagonalSplitNode,splitNodeNoneNeighbourOnPath)
+		
+		#all three pieces of the original path are collected in paths
+		paths.append(pathB)
+		
+		#sort out the pieces
+		startNodePath = None
+		endNodePath = None
+		middlePath = None
+		for path in paths:
+			if self.__cycle[0] in path: #start node
+				startNodePath = path
+			elif self.__cycle[-2] in path: #end node
+				endNodePath = path
+			else:
+				middlePath = path
+		
+		#error checking should not happen here, but let it be for the moment being....
+		if startNodePath is None or endNodePath is None or middlePath is None:
+			print "ASSERT ERROR In paths"
+		
+		if len(startNodePath)==0  or len(endNodePath)==0 or len(middlePath)==0:
+			print "ASSERT ERROR In paths"
+			
+		 
+		# cells[splitCell] = CELL_SPLITPOINT
+		
+		#
+		self.__splitPaths.append([middlePath + [middlePath[0]], endNodePath + startNodePath + [endNodePath[0]]])
+		
+		# if (len(middlePath) == 0):
+		# #perfect split when splitnodes where first and last element on given path
+			# return cells, [startNodePath + [startNodePath[0]], endNodePath + [endNodePath[0]]]
+		# else:
+			# return cells,[middlePath + [middlePath[0]], endNodePath + startNodePath + [endNodePath[0]]]
+	
+def split_path_at_two_neighbours(path,splitA,splitB):
+	#old  __split_path_loop
+	# ASSERT:splitNode and checkNode are neighbours (direction unknown)
+	
+	#make sure path is not a cycle
+	if path[0] == path[-1]:
+		path = path[:-1]
+	
+	indexA = path.index(splitA)
+	indexB = path.index(splitB)
+	
+	if indexA > indexB : #sort indeces, indexA must be smallest one
+		indexA,indexB = indexB,indexA
+	
+	if (indexA == 0 and indexB == len(path)-1):
+		#exception case where "neighbours are the first and last element on the path
+		pathA = path
+		pathB = []
+	else:
+		pathA = path[:indexA+1] #include splitNode
+		pathB = path[indexB:] #could be empty...
+	
+	return [pathA,pathB]
+		
+	
 		
 def standardized_hamilton_cycle(path):
 	#assert hamilton cycle with (row,col) tuples, first and last tuple equal
@@ -206,10 +307,20 @@ if __name__== "__main__":
 	path = [ (2, 1), (2, 0), (3, 0),(3,1),(3, 2), (3, 3), (3, 4), (3,5), (2, 5), (1, 5), (0, 5), (0, 4), (1, 4), (2, 4), (2, 3), (1, 3), (0,3), (0, 2), (0, 1), (0, 0), (1, 0), (1, 1), (1, 2), (2, 2),(2,1)]    #hamilton cycle
 	# path = [ (2, 1), (2, 0), (3, 0),(3,1)],[(3, 2), (3, 3), (3, 4), (3,5), (2, 5), (1, 5), (0, 5), (0, 4), (1, 4), (2, 4), (2, 3), (1, 3), (0,3), (0, 2), (0, 1), (0, 0), (1, 0), (1, 1), (1, 2), (2, 2)]    #valid paths
 	
-	cycle = HamiltonCycle(4,6,path)
+	ROWS = 4
+	COLS = 6
+	cycle = HamiltonCycle(ROWS,COLS,path)
 	cycle.create_cell_pattern_from_hamilton_cycle()
 	
 	cycle.find_all_neighbour_hamilton_cycles()
 	# print vars(cycle)["_HamiltonCycle__lattice"]
-	cycle.print_cells_ASCII()
+	
+	checkPath = latticeOperations.Lattice(ROWS,COLS)
+	for splitPath in cycle.get_split_paths():
+		checkPath.new_paths_to_lattice(splitPath)
+		checkPath.string_from_paths()
+		
+		print splitPath
+		
+		
 	print cycle
