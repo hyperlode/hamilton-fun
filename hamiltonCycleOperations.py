@@ -22,6 +22,8 @@ class HamiltonCycle():
 		self.__cells = {}
 		self.__cycle = cycle 
 		
+		self.__splitCells = [] #all the potential splitting points.
+		
 	def __str__(self):
 		self.__lattice.string_from_paths()
 		return str(self.__lattice)
@@ -118,7 +120,76 @@ class HamiltonCycle():
 					printrow += "?"
 			printcells += printrow + "\n"
 		print printcells
-
+	
+	######################################
+	#neighbour finder
+	######################################
+	
+	def find_all_neighbour_hamilton_cycles(self):
+		self.find_split_cells()
+		self.print_cells_ASCII()
+	
+	def find_split_cells(self):
+		#find all potential split cells in path or cycle.  
+		#  cell (0,0) with its corner nodes:
+		#    (0,0)     (0,1)  ... 
+		#     
+		#    (1,0)     (1,1)  ...  
+		
+		# at node 0,0  we investigate the drawn situation.  if there is one edge, not good, if there are three edges, not good. if there are 2 edges that don't touch each other (two vertical OR two horizontal) OK! (add to list)
+		#this is a split point, because we can transform the two horizontal edges to vertical ones (or the other way around)  and have a new path.
+		
+		#we run through each node in the lattice and check it with the three nodes east, south-east and south if the situation is occuring. if so, add node to list as "found"
+		#we could say we run through each cell in the lattice. Only bother if the cell is inside the cycle, otherwise, no swapping possible. (the cycle would be split!)
+		splitCells = []
+		for row in range(self.__lattice.rows()-1 ):
+			for col in range(self.__lattice.cols()-1 ):
+				if self.__cells[(row,col)] == CELL_OUTSIDE:
+					continue
+				#nodes to examine in Lattice, East, SE, South  (referenced from the top left node, which is the same coord as the cell name)
+				nodesToCheckInLattice = {(row,col+1),(row+1,col),(row+1,col+1)} #create as set
+				
+				#orthogonal neighbours of first node E and S
+				orthoNodesInLattice =  {(row,col+1),(row+1,col)} #create as set
+				
+				#get neighbour nodes on path on top left node.
+				neighboursOnPathTopLeftNode =  self.neighbours_of_node((row,col))
+				
+				#------------------------
+				#there should be exactly one neighbour in the nodes to examine (E or S)
+				nodesPartOfTopLeftNodePath = neighboursOnPathTopLeftNode.intersection(orthoNodesInLattice)
+				
+				if len(nodesPartOfTopLeftNodePath) != 1:
+					#isolated if zero, corner if 2
+					continue #next iteration of for loop (is not the same as break!!!)
+				else:
+					topLeftNodeConnectedNode = nodesPartOfTopLeftNodePath.pop()
+				#------------------------
+				#get neighbour nodes on path on bottom right node.
+				neighboursOnPathBottomRightNode =  self.neighbours_of_node((row+1,col+1))
+				
+				#there should be exactly one neighbour in the nodes to examine (E or S)
+				nodesPartOfBottomRightNodePath = neighboursOnPathBottomRightNode.intersection(orthoNodesInLattice)
+				
+				if len(nodesPartOfBottomRightNodePath) != 1:
+					#isolated if zero, corner if 2
+					continue #next iteration of for loop (is not the same as break!!!)
+				else:
+					bottomRighNodeConnectedNode = nodesPartOfBottomRightNodePath.pop()
+				
+				#------------------------
+				if bottomRighNodeConnectedNode == topLeftNodeConnectedNode:
+					#u shape (all nodes connected)
+					continue #next iteration of for loop (is not the same as break!!!)
+				else:
+					splitCells.append((row,col))
+		#indicate splitcells in cells
+		for cell in splitCells:
+			self.__cells[cell] = CELL_SPLITPOINT_POTENTIAL 
+		
+		self.__splitCells = splitCells
+		
+		
 def standardized_hamilton_cycle(path):
 	#assert hamilton cycle with (row,col) tuples, first and last tuple equal
 	#so it always starts with (0,0) and ends with (0,0)
@@ -137,6 +208,8 @@ if __name__== "__main__":
 	
 	cycle = HamiltonCycle(4,6,path)
 	cycle.create_cell_pattern_from_hamilton_cycle()
+	
+	cycle.find_all_neighbour_hamilton_cycles()
 	# print vars(cycle)["_HamiltonCycle__lattice"]
 	cycle.print_cells_ASCII()
 	print cycle
