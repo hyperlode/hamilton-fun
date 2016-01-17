@@ -15,6 +15,7 @@ class Lattice:
 		# self.__colCells = self.__cols-1
 		self.__latticeGraphDict = {}
 		self.__create_lattice_graph_dict()
+		
 		self.__latticeGraph = graphs.Graph(self.__latticeGraphDict)
 		
 		self.__paths = []  #list of paths in the lattice. 
@@ -61,6 +62,11 @@ class Lattice:
 				self.__latticeGraphDict[(row,col)]=neighbours
 		
 		return True
+		
+	def find_hamilton_cycle(self):
+		cycle = self.__latticeGraph.find_hamilton_path((0,0),(0,1))
+		cycle.append(cycle[0]) #close the loop
+		return cycle
 		
 	def find_neighbour_nodes(self, node):
 		#neighbours in lattice as list

@@ -1,6 +1,7 @@
 import latticeOperations
 import twoCyclesCoverAllPointsInLatticeOperations
 import random 
+import graphs
 
 CELL_INSIDE = 0
 CELL_OUTSIDE = 1 
@@ -11,6 +12,10 @@ CELL_RECOMBINATION_CANDIDATE = 4
 class HamiltonCycle():
 	def __init__(self, lattice_rows, lattice_cols, cycle):
 		self.__lattice = latticeOperations.Lattice(lattice_rows, lattice_cols)
+		
+		#if no cycle provided, make one warning: super slow for bigger lattices, better just provide one!!!
+		if cycle is None:
+			cycle = self.__lattice.find_hamilton_cycle()
 		
 		#let path start from (0,0)  here we don't yet really check for hamilton, but if error, we know it is wrong already
 		try:
@@ -43,6 +48,8 @@ class HamiltonCycle():
 		if not stats["hamilton"] or stats["cycles"]!=1:
 			print self
 			raise Exception("no hamilton path provided")
+	
+			
 	def get_split_pathsData(self):
 		return self.__splitPathsData
 		
@@ -343,8 +350,8 @@ def getNeighbourCycles(rows, cols, path):
 if __name__== "__main__":
 	path = [ (2, 1), (2, 0), (3, 0),(3,1),(3, 2), (3, 3), (3, 4), (3,5), (2, 5), (1, 5), (0, 5), (0, 4), (1, 4), (2, 4), (2, 3), (1, 3), (0,3), (0, 2), (0, 1), (0, 0), (1, 0), (1, 1), (1, 2), (2, 2),(2,1)]    #hamilton cycle
 	# path = [ (2, 1), (2, 0), (3, 0),(3,1)],[(3, 2), (3, 3), (3, 4), (3,5), (2, 5), (1, 5), (0, 5), (0, 4), (1, 4), (2, 4), (2, 3), (1, 3), (0,3), (0, 2), (0, 1), (0, 0), (1, 0), (1, 1), (1, 2), (2, 2)]    #valid paths
-	
-	ROWS = 4
+	path = None
+	ROWS = 7
 	COLS = 6
 	ITERATIONS = 100
 	neighbourCycles = [path]
