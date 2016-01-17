@@ -1,5 +1,6 @@
 import latticeOperations
 import twoCyclesCoverAllPointsInLatticeOperations
+import random 
 
 CELL_INSIDE = 0
 CELL_OUTSIDE = 1 
@@ -27,12 +28,14 @@ class HamiltonCycle():
 		
 		self.__splitCells = [] #all the potential splitting points.
 		self.__splitPathsData = [] 
+		self.__neighbourHamiltonCycles = []
 		
+		self.create_cell_pattern_from_hamilton_cycle()
 		
 	def __str__(self):
 		self.__lattice.string_from_paths()
 		return str(self.__lattice)
-		
+	
 	def addCycle(self,path):
 		#add hamilton cycle, and check if it is one
 		self.__lattice.new_paths_to_lattice(path)
@@ -111,12 +114,14 @@ class HamiltonCycle():
 		
 	def print_cells_ASCII(self, withExtraInfo = True):
 		
+		
 		if withExtraInfo:
 			cells = self.__cells_extra_info
 		else:
 			cells = self.__cells
 		
 		printcells = ""
+		
 		for row in range(self.__lattice.rows() - 1):
 			printrow = ""
 			for col in range(self.__lattice.cols() - 1):
@@ -141,20 +146,27 @@ class HamiltonCycle():
 	
 	def find_all_neighbour_hamilton_cycles(self):
 		self.find_split_cells()
-		self.print_cells_ASCII(True)
+		# self.print_cells_ASCII(True)
 		for cell in self.__splitCells:
 			self.split(cell)
 			
-				
-		for splitPath in cycle.get_split_pathsData():
-			twoLoops = twoCyclesCoverAllPointsInLatticeOperations.TwoCycles(self.__lattice.rows(), self.__lattice.cols(),splitPath["paths"],splitPath["cells"],splitPath["splitCell"])
-			
-			twoLoops.find_recombination_cells()
-			twoLoops.print_cells_ASCII()
-			print"----"
-			# checkPath.new_paths_to_lattice(splitPath["paths"])
-			# checkPath.string_from_paths()		
 		
+		
+		for splitPath in self.get_split_pathsData():
+			twoLoops = twoCyclesCoverAllPointsInLatticeOperations.TwoCycles(self.__lattice.rows(), self.__lattice.cols(),splitPath["paths"],splitPath["cells"],splitPath["splitCell"])
+			# twoLoops.find_recombination_cells()
+			# twoLoops.print_cells_ASCII()
+			twoLoops.find_all_hamilton_neighbours() #search the neighbours
+			self.__neighbourHamiltonCycles.extend(twoLoops.get_hamilton_cycles()) #get the neighbours
+		
+		#generalize the found cycles
+		self.__neighbourHamiltonCycles = [standardized_hamilton_cycle(test) for test in self.__neighbourHamiltonCycles]
+		#self.__neighbourHamiltonCycles = set(self.__neighbourHamiltonCycles)
+		
+			
+	def get_hamilton_cycle_neighbours(self):
+		return self.__neighbourHamiltonCycles
+			
 	def find_split_cells(self):
 		#find all potential split cells in path or cycle.  
 		#  cell (0,0) with its corner nodes:
@@ -319,6 +331,14 @@ def standardized_hamilton_cycle(path):
 		i = path.index((0,0))
 		return path[i:]+ path[:i] +[(0,0)]
 		
+def getNeighbourCycles(rows, cols, path):
+	cycle = HamiltonCycle(ROWS,COLS,path)
+	cycle.print_cells_ASCII(True)
+	cycle.find_all_neighbour_hamilton_cycles()
+	neighbourCycles = cycle.get_hamilton_cycle_neighbours()
+	
+	
+	return neighbourCycles
 		
 if __name__== "__main__":
 	path = [ (2, 1), (2, 0), (3, 0),(3,1),(3, 2), (3, 3), (3, 4), (3,5), (2, 5), (1, 5), (0, 5), (0, 4), (1, 4), (2, 4), (2, 3), (1, 3), (0,3), (0, 2), (0, 1), (0, 0), (1, 0), (1, 1), (1, 2), (2, 2),(2,1)]    #hamilton cycle
@@ -326,14 +346,18 @@ if __name__== "__main__":
 	
 	ROWS = 4
 	COLS = 6
-	cycle = HamiltonCycle(ROWS,COLS,path)
-	cycle.create_cell_pattern_from_hamilton_cycle()
+	ITERATIONS = 100
+	neighbourCycles = [path]
+	for i in range(ITERATIONS):
+		print i
+		cycle = random.choice(neighbourCycles)
+		neighbourCycles = getNeighbourCycles(ROWS,COLS,cycle)
+		
+	# for n in neighbourCycles:
+		# # print n
+		# # new = HamiltonCycle(ROWS,COLS,n)
+		# # new.print_cells_ASCII(False)
 	
-	cycle.find_all_neighbour_hamilton_cycles()
-	# print vars(cycle)["_HamiltonCycle__lattice"]
-	
-	# checkPath = latticeOperations.Lattice(ROWS,COLS)
 	
 		
-		
-	print cycle
+		# pass

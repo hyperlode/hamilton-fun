@@ -14,7 +14,8 @@ class TwoCycles():
 		self.__lattice.new_paths_to_lattice(paths)
 		self.__paths = paths
 		self.forbiddenRecombinationCell = forbiddenRecombinator
-		self.__potentialRecombinationCells = []
+		self.__foundLoopConnectionCells = []
+		self.__foundHamiltonCycles = []
 		self.__cells_extra_info = cells
 		self.__cells = {}
 		
@@ -51,7 +52,9 @@ class TwoCycles():
 			printcells += printrow + "\n"
 		print printcells
 	
-	
+	#################################################
+	#################################################
+	#################################################
 	
 	def find_recombination_cells(self):
 		#return all possible cells for recombination for two paths.
@@ -118,7 +121,8 @@ class TwoCycles():
 		#write down in lattice
 		for cell in approvedOutsiders:
 			self.__cells_extra_info[cell]= CELL_RECOMBINATION_CANDIDATE
-		return approvedOutsiders
+		
+		self.__foundLoopConnectionCells  =approvedOutsiders
 	
 	
 	def find_neighbour_cells(self, cell):
@@ -188,3 +192,101 @@ class TwoCycles():
 			
 			
 		return adjecent
+	
+	def find_all_hamilton_neighbours(self):
+		self.find_recombination_cells()
+		for cell in self.__foundLoopConnectionCells:
+			self.__foundHamiltonCycles.append(self.convert_cycles_to_hamilton_cycle(cell))
+	
+	def get_hamilton_cycles(self):
+		return self.__foundHamiltonCycles
+	
+	
+	def convert_cycles_to_hamilton_cycle(self,cell):
+		#assert two closed paths in arg. paths
+		#connects paths at given cell
+		
+		#check if node (corresponding to cell (top left node of cell that is) is in first path, if not , switch
+		#assume cellId node is in pathA
+		pathA = self.__paths[0]
+		pathB = self.__paths[1]
+		if cell not in pathA:
+			pathB,pathA = pathA, pathB
+		
+		neighboursA = self.neighbours_of_node(pathA, cell)
+		
+		#check whether the reconnection cell will have horizontal or vertical neighbours.
+		connectionCellHasVerticalNeighbourCells = True
+		neighbourToReconnectCellNodeWith = (cell[0],cell[1]+1) #assumehorizontal connection
+		neighbourOnSameSide = (cell[0]+1,cell[1])
+		if neighbourToReconnectCellNodeWith in neighboursA: #if path is horizontal, there is a vertical reconnection
+			neighbourToReconnectCellNodeWith, neighbourOnSameSide = neighbourOnSameSide, neighbourToReconnectCellNodeWith 
+			connectionCellHasVerticalNeighbourCells = False
+			
+		pathA1, pathA2 = split_path_at_two_neighbours(pathA, cell, neighbourOnSameSide )
+		pathA = pathA2 + pathA1
+		
+		pathB1, pathB2 = split_path_at_two_neighbours(pathB, (cell[0]+1, cell[1]+1), neighbourToReconnectCellNodeWith)
+		pathB = pathB2 + pathB1
+
+		if pathA[-1] not in self.__lattice.find_neighbour_nodes(pathB[0]):
+		#check if neighbours on lattice.
+			print pathA
+			print pathB
+			raise Exception("paths matched wrongly!")
+		
+		#generate new cells from path
+		recombined = pathA + pathB + [pathA[0]]
+		return recombined
+		# cells = self.create_cell_pattern_from_hamilton_cycle(recombined)
+		
+			
+	def neighbours_of_node(self, path, node):
+		#from old neighbours_on_cycle in first program.
+		
+		#get index of node in path
+		pos = path.index(node)
+		
+		neighboursOnPath = set()
+		
+		#previous node
+		if (pos>0):
+			neighboursOnPath.add(path[pos-1])
+		else:
+			#check if cycle if, so, add element from end of path
+			neighboursOnPath.add(path[-2]) #penultimate element of list
+		
+		#next node
+		try:
+			neighboursOnPath.add(path[pos+1])
+		except IndexError:
+			#ASSERT pos == len(path)
+			neighboursOnPath.add(path[1]) #second element of list
+		return neighboursOnPath	
+
+def split_path_at_two_neighbours(path,splitA,splitB):
+	#old  __split_path_loop
+	# ASSERT:splitNode and checkNode are neighbours (direction unknown)
+	
+	#make sure path is not a cycle
+	if path[0] == path[-1]:
+		path = path[:-1]
+	
+	indexA = path.index(splitA)
+	indexB = path.index(splitB)
+	
+	if indexA > indexB : #sort indeces, indexA must be smallest one
+		indexA,indexB = indexB,indexA
+	
+	if (indexA == 0 and indexB == len(path)-1):
+		#exception case where "neighbours are the first and last element on the path
+		pathA = path
+		pathB = []
+	else:
+		pathA = path[:indexA+1] #include splitNode
+		pathB = path[indexB:] #could be empty...
+	
+	return [pathA,pathB]
+		
+		
+		
