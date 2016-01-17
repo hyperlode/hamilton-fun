@@ -15,7 +15,9 @@ class HamiltonCycle():
 		
 		#if no cycle provided, make one warning: super slow for bigger lattices, better just provide one!!!
 		if cycle is None:
-			cycle = self.__lattice.find_hamilton_cycle()
+			# cycle = self.__lattice.find_hamilton_cycle()
+			# print cycle
+			cycle = self.do_manual_infill()
 		
 		#let path start from (0,0)  here we don't yet really check for hamilton, but if error, we know it is wrong already
 		try:
@@ -41,6 +43,50 @@ class HamiltonCycle():
 		self.__lattice.string_from_paths()
 		return str(self.__lattice)
 	
+	
+	def is_hamilton_cycle_existing(self):
+		#only cycle possible if even number of nodes in lattice.
+		return self.__lattice.rows() * self.__lattice.cols() % 2 == 0
+	
+	def do_manual_infill(self):
+		if not self.is_hamilton_cycle_existing():
+			raise Exception("no hamilton cycle possible")
+		
+		path = self.__infillRecursive([(0,0)])
+		path = path + [path[0]]
+		return path
+		
+	def __infillRecursive(self,path):
+		
+		n = path[-1]
+		if self.__lattice.cols()%2 != 0:
+			directions = [(n[0]+1,n[1]),(n[0],n[1]+1),(n[0],n[1]-1),(n[0]-1,n[1])]
+		else:
+			directions = [(n[0],n[1]+1),(n[0]+1,n[1]),(n[0]-1,n[1]),(n[0],n[1]-1)]
+			
+		orthoLatticeNodeNeighbours= self.__lattice.find_neighbour_nodes(n)
+		if directions[0] in orthoLatticeNodeNeighbours and directions[0] not in path:
+			path.append(directions[0])
+			self.__infillRecursive(path)
+		elif directions[1] in orthoLatticeNodeNeighbours and directions[1] not in path:
+			path.append(directions[1])
+			self.__infillRecursive(path)
+		elif directions[2] in orthoLatticeNodeNeighbours and directions[2] not in path:
+			path.append(directions[2])
+			self.__infillRecursive(path)
+		elif directions[3] in orthoLatticeNodeNeighbours and directions[3] not in path:
+			path.append(directions[3])
+			self.__infillRecursive(path)
+		# elif len(path) == self.__rows * self.__cols:
+			# return
+		else:
+			pass
+			
+		return path	
+			
+			
+		
+		
 	def addCycle(self,path):
 		#add hamilton cycle, and check if it is one
 		self.__lattice.new_paths_to_lattice(path)
@@ -118,10 +164,11 @@ class HamiltonCycle():
 			#ASSERT pos == len(path)
 			neighboursOnPath.add(path[1]) #second element of list
 		return neighboursOnPath
+	
+	def cells_to_string(self, rowDivider = None, withExtraInfo  = False):
+		#rowDivider is a string one or more character to put between rows, or value is ROWNUMBER, it will then output the rowNumber as divider
 		
-	def print_cells_ASCII(self, withExtraInfo = True):
-		
-		
+		newLineChar  = rowDivider
 		if withExtraInfo:
 			cells = self.__cells_extra_info
 		else:
@@ -144,8 +191,30 @@ class HamiltonCycle():
 					printrow += "o"
 				else:
 					printrow += "?"
-			printcells += printrow + "\n"
-		print printcells
+			if rowDivider == "ROWNUMBER":
+				newLineChar = str(row + 1)
+			if newLineChar is not None:
+				printcells += printrow + newLineChar
+			else:
+				printcells += printrow
+		
+		if newLineChar is not None and len(newLineChar)>0:
+			#no divider on end of string.
+			printcells = printcells[:-len(newLineChar)]
+		return printcells
+		
+		
+	def print_cells_ASCII(self, withExtraInfo = True):
+		
+		print self.cells_to_string("\n",withExtraInfo)
+	
+	# def get_cycle_as_nameString(self, rowDivider = "_",withExtraInfo = False):
+	def get_cycle_as_nameString(self, rowDivider = "ROWNUMBER",withExtraInfo = False):
+		return self.cells_to_string(rowDivider = rowDivider,withExtraInfo = withExtraInfo)
+		
+	def set_cycle_from_nameString(self):
+		pass
+	
 	
 	######################################
 	#neighbour finder
@@ -299,7 +368,7 @@ class HamiltonCycle():
 
 		self.__splitPathsData.append({"cells": cellsWithSplitpoint, "splitCell": splitCell, "paths":[middlePath + [middlePath[0]], endNodePath + startNodePath + [endNodePath[0]]]})
 	
-	
+		
 	
 def split_path_at_two_neighbours(path,splitA,splitB):
 	#old  __split_path_loop
@@ -341,6 +410,7 @@ def standardized_hamilton_cycle(path):
 def getNeighbourCycles(rows, cols, path):
 	cycle = HamiltonCycle(ROWS,COLS,path)
 	cycle.print_cells_ASCII(True)
+	print cycle.get_cycle_as_nameString()
 	cycle.find_all_neighbour_hamilton_cycles()
 	neighbourCycles = cycle.get_hamilton_cycle_neighbours()
 	
@@ -351,13 +421,17 @@ if __name__== "__main__":
 	path = [ (2, 1), (2, 0), (3, 0),(3,1),(3, 2), (3, 3), (3, 4), (3,5), (2, 5), (1, 5), (0, 5), (0, 4), (1, 4), (2, 4), (2, 3), (1, 3), (0,3), (0, 2), (0, 1), (0, 0), (1, 0), (1, 1), (1, 2), (2, 2),(2,1)]    #hamilton cycle
 	# path = [ (2, 1), (2, 0), (3, 0),(3,1)],[(3, 2), (3, 3), (3, 4), (3,5), (2, 5), (1, 5), (0, 5), (0, 4), (1, 4), (2, 4), (2, 3), (1, 3), (0,3), (0, 2), (0, 1), (0, 0), (1, 0), (1, 1), (1, 2), (2, 2)]    #valid paths
 	path = None
-	ROWS = 7
-	COLS = 6
-	ITERATIONS = 100
+	ROWS = 10
+	COLS = 10
+	ITERATIONS = 2
 	neighbourCycles = [path]
 	for i in range(ITERATIONS):
 		print i
+		
+		print len(neighbourCycles)
+		
 		cycle = random.choice(neighbourCycles)
+		
 		neighbourCycles = getNeighbourCycles(ROWS,COLS,cycle)
 		
 	# for n in neighbourCycles:
