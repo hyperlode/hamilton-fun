@@ -10,9 +10,16 @@ CELL_SPLITPOINT = 3
 CELL_RECOMBINATION_CANDIDATE = 4
 
 class HamiltonCycle():
-	def __init__(self, lattice_rows, lattice_cols, cycle):
+	
+	def __init__(self, lattice_rows, lattice_cols, cycle,cycleByName = None):
 		self.__lattice = latticeOperations.Lattice(lattice_rows, lattice_cols)
 		
+		if cycleByName is not None:
+			#generate cycle from given name
+			
+			cycle = self.initFromName(cycleByName)
+			
+			
 		#if no cycle provided, make one warning: super slow for bigger lattices, better just provide one!!!
 		if cycle is None:
 			# cycle = self.__lattice.find_hamilton_cycle()
@@ -38,7 +45,14 @@ class HamiltonCycle():
 		self.__neighbourHamiltonCycles = []
 		
 		self.create_cell_pattern_from_hamilton_cycle()
+	
+	def initFromName(self, cycleByName):
 		
+		self.__cells = self.cells_from_nameString(self.__lattice.rows(),self.__lattice.cols(),cycleByName)
+		
+		return self.__cycle_from_cells()
+		
+	
 	def __str__(self):
 		self.__lattice.string_from_paths()
 		return str(self.__lattice)
@@ -192,7 +206,8 @@ class HamiltonCycle():
 				else:
 					printrow += "?"
 			if rowDivider == "ROWNUMBER":
-				newLineChar = str(row + 1)
+				# newLineChar = str(row + 1)
+				newLineChar = '{number:0{width}d}'.format(width=len(str(self.__lattice.rows() - 2)), number=row+1)
 			if newLineChar is not None:
 				printcells += printrow + newLineChar
 			else:
@@ -206,15 +221,160 @@ class HamiltonCycle():
 		
 	def print_cells_ASCII(self, withExtraInfo = True):
 		
-		print self.cells_to_string("\n",withExtraInfo)
+		print self.cells_to_string("\n", withExtraInfo)
 	
 	# def get_cycle_as_nameString(self, rowDivider = "_",withExtraInfo = False):
-	def get_cycle_as_nameString(self, rowDivider = "ROWNUMBER",withExtraInfo = False):
-		return self.cells_to_string(rowDivider = rowDivider,withExtraInfo = withExtraInfo)
+	def get_cycle_as_nameString(self, rowDivider = "", withExtraInfo = False):
+		# rowDivider ="ROWNUMBER"   #my little baby, but unnecessary overkill!
+		return self.cells_to_string(rowDivider = rowDivider, withExtraInfo = withExtraInfo)
+			
+	def cells_from_nameString(self,rows,cols,nameString):
+		#dangerous! check result!
+		#create all outside cells for this situation
+		#default all cells are outside path
+		cells = {(r, c):CELL_OUTSIDE for r in range(rows - 1) for c in range(cols - 1)}
 		
-	def set_cycle_from_nameString(self):
-		pass
 	
+		#autoRowDividerCheck
+		extraLength = len(nameString) - (rows-1) * (cols-1)
+		newLineLength = extraLength / (rows - 2) #check length of one newline spacer
+		
+		# nameString = nameString[cols-1:cols + newLineLength+1]
+		cleanedNameString = ""
+		
+		for r in range(rows-1): 
+			# print nameString [  r * (cols + newLineLength  -1) : r * (cols + newLineLength -1) + cols - 1 ]
+			# cleanedNameString += nameString [  r * (cols + newLineLength + 1 ) : r * (cols + newLineLength + 1) + cols - 1 ]
+			cleanedNameString += nameString [  r * (cols + newLineLength -1 ) : r * (cols + newLineLength - 1) + cols - 1 ]
+		
+		index = 0
+		for row in range(rows-1):
+			for col in range(cols-1):	
+				
+				if cleanedNameString[index] == "X":
+					cells[(row,col)] = CELL_INSIDE
+				elif  cleanedNameString[index] == " ":
+					cells[(row,col)] = CELL_OUTSIDE
+				else:
+					print cleanedNameString
+					raise Exception("strange values in string, only inside and outside allowed")
+				
+				
+				index += 1
+		return cells
+	
+	def __cycle_from_cells(self):
+		#only used for alternative init with name
+		#dangerous! check result!
+		#def getPostitBoundary(self):
+		'''
+		numbers= postit corners (defined)
+		
+		
+		'''
+		'''
+		get circumference of postit notes (if cannot be closed as one path (= start point = endpoint), illegal!
+		
+		walk from posititcorner to postit corner
+		'''
+		
+		#first elements are always the same
+		boundary = [(0,0), (0,1)]
+		
+		lengthBoundary  = (self.__lattice.rows() ) * (self.__lattice.cols() ) #defined, lenght of the path is equal to "cornerpositions" as each cornerposition is always taken.
+		# print "jijijijijiji"
+		nodeBackup = None
+		# print self.__cells
+		# self.print)
+		index = 0
+		while len(boundary) < lengthBoundary:
+			# index += 1
+			# if index > 50:
+				# raise
+			#print len(boundary)
+			#get coord of active cell 
+			# row,col =  
+			activeNode = boundary[-1] 
+			
+			#get ortho neighbour coords:
+			neighbourNodes = self.__lattice.find_neighbour_nodes(activeNode)
+			
+			#freeNode 
+			nodesToCheck = [node for node in neighbourNodes if node not in boundary ]
+			addedNode = False
+			
+			for node in nodesToCheck:
+				# print "========"
+				# print node
+				adjecentCells = self.find_adjecentCells_from_two_path_coords(activeNode, node)
+				# print adjecentCells
+				
+				if len(adjecentCells)== 2:
+					if self.__cells[adjecentCells[0]] != self.__cells[adjecentCells[1]]:
+						#different (one outside, one inside cell) cell types
+						addedNode = True
+						boundary.append(node)
+						# print "this is the node"
+						break
+				elif len(adjecentCells)== 1:
+					nodeBackup = node
+					# boundary.append(node)
+					# print "this is the nodeeee"
+					# break
+			if not addedNode:
+				# print nodeBackup
+				# print "added as backup"
+				boundary.append(nodeBackup)
+				
+		return boundary	+ [boundary[0]]
+			
+			
+		
+	def find_adjecentCells_from_two_path_coords(self,coord1, coord2):
+		#ASSERT coord1 and coord2 are orthogonal neighbours on lattice
+		#sort coords
+		adjecent = []
+		
+		if coord1[0] == coord2[0]:
+			#horizontal (row the same)
+			#check sequence and make sure it is normalized (eliminate path direction)
+			if coord1[1] >coord2[1]:
+				coord1,coord2 = coord2,coord1
+			try:
+				self.__cells[coord1] 
+				adjecent.append(coord1)
+			except:
+				#ASSERT cell outside  boundaries
+				pass
+				
+			try:
+				self.__cells[(coord1[0]-1,coord1[1])] 
+				adjecent.append((coord1[0]-1,coord1[1]))
+			except:
+				#ASSERT cell outside  boundaries
+				pass
+			
+		else:
+			#vertical node on path
+			if coord1[0] > coord2[0]:
+				coord1,coord2 = coord2,coord1
+			
+			try:
+				self.__cells[coord1] 
+				adjecent.append(coord1)
+			except:
+				#ASSERT cell outside  boundaries
+				pass
+				
+			try:
+				self.__cells[(coord1[0],coord1[1]-1)] 
+				adjecent.append((coord1[0],coord1[1]-1))
+			except:
+				#ASSERT cell outside  boundaries
+				pass
+			
+			
+		return adjecent
 	
 	######################################
 	#neighbour finder
@@ -409,31 +569,68 @@ def standardized_hamilton_cycle(path):
 		
 def getNeighbourCycles(rows, cols, path):
 	cycle = HamiltonCycle(ROWS,COLS,path)
-	cycle.print_cells_ASCII(True)
-	print cycle.get_cycle_as_nameString()
+	# cycle.print_cells_ASCII(True)
+	nstr = cycle.get_cycle_as_nameString("")
+	
 	cycle.find_all_neighbour_hamilton_cycles()
 	neighbourCycles = cycle.get_hamilton_cycle_neighbours()
+	# print nstr
+	# retest = HamiltonCycle(ROWS,COLS,None,nstr)
+	# print "=======!!!!!===="
+	# retest.print_cells_ASCII(True)
 	
-	
+	# print retest.get_cycle_as_nameString()
+	# print "==========="
 	return neighbourCycles
+
+def getNeighbourCyclesAsNames(rows, cols, cycleName):
+	cycle = HamiltonCycle(ROWS,COLS,None,cycleName)
+	# cycle.print_cells_ASCII(True)
+	# nstr = cycle.get_cycle_as_nameString("")
+	
+	cycle.find_all_neighbour_hamilton_cycles()
+	
+	neighbourCycleNames = []
+	neighbourCycles = cycle.get_hamilton_cycle_neighbours()
+	for cycle in neighbourCycles:
+		nameCycle = HamiltonCycle(ROWS,COLS,cycle)
+		nameCycle.print_cells_ASCII()
+		print "\n"
+		neighbourCycleNames.append(nameCycle.get_cycle_as_nameString(""))
 		
+	# print nstr
+	# retest = HamiltonCycle(ROWS,COLS,None,nstr)
+	# print "=======!!!!!===="
+	# retest.print_cells_ASCII(True)
+	
+	# print retest.get_cycle_as_nameString()
+	# print "==========="
+	return neighbourCycleNames
+	
 if __name__== "__main__":
 	path = [ (2, 1), (2, 0), (3, 0),(3,1),(3, 2), (3, 3), (3, 4), (3,5), (2, 5), (1, 5), (0, 5), (0, 4), (1, 4), (2, 4), (2, 3), (1, 3), (0,3), (0, 2), (0, 1), (0, 0), (1, 0), (1, 1), (1, 2), (2, 2),(2,1)]    #hamilton cycle
 	# path = [ (2, 1), (2, 0), (3, 0),(3,1)],[(3, 2), (3, 3), (3, 4), (3,5), (2, 5), (1, 5), (0, 5), (0, 4), (1, 4), (2, 4), (2, 3), (1, 3), (0,3), (0, 2), (0, 1), (0, 0), (1, 0), (1, 1), (1, 2), (2, 2)]    #valid paths
 	path = None
-	ROWS = 10
-	COLS = 10
-	ITERATIONS = 2
+	ROWS = 6
+	COLS = 6
+	ITERATIONS = 10
 	neighbourCycles = [path]
+	startName = "XXXXXX X XX X XX X XX X X"
 	for i in range(ITERATIONS):
-		print i
+		# print "000000000"
+		# print i
 		
-		print len(neighbourCycles)
+		# print len(neighbourCycles)
+		neighbourNames = getNeighbourCyclesAsNames(ROWS,COLS,startName)
+		startName = random.choice(neighbourNames)
+		print neighbourNames
+		# cycle = random.choice(neighbourCycles)
+		# cycle = neighbourCycles[-1]
 		
-		cycle = random.choice(neighbourCycles)
+
 		
-		neighbourCycles = getNeighbourCycles(ROWS,COLS,cycle)
-		
+		# neighbourCycles = getNeighbourCycles(ROWS,COLS,cycle)
+		# print neighbourCycles
 	# for n in neighbourCycles:
 		# # print n
 		# # new = HamiltonCycle(ROWS,COLS,n)
