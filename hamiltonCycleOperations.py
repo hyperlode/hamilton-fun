@@ -2,6 +2,7 @@ import latticeOperations
 import twoCyclesCoverAllPointsInLatticeOperations
 import random 
 import graphs
+import fileOperations
 
 CELL_INSIDE = 0
 CELL_OUTSIDE = 1 
@@ -584,7 +585,7 @@ def getNeighbourCycles(rows, cols, path):
 	return neighbourCycles
 
 def getNeighbourCyclesAsNames(rows, cols, cycleName):
-	cycle = HamiltonCycle(ROWS,COLS,None,cycleName)
+	cycle = HamiltonCycle(rows,cols,None,cycleName)
 	# cycle.print_cells_ASCII(True)
 	# nstr = cycle.get_cycle_as_nameString("")
 	
@@ -594,8 +595,8 @@ def getNeighbourCyclesAsNames(rows, cols, cycleName):
 	neighbourCycles = cycle.get_hamilton_cycle_neighbours()
 	for cycle in neighbourCycles:
 		nameCycle = HamiltonCycle(ROWS,COLS,cycle)
-		nameCycle.print_cells_ASCII()
-		print "\n"
+		# nameCycle.print_cells_ASCII()
+		# print "\n"
 		neighbourCycleNames.append(nameCycle.get_cycle_as_nameString(""))
 		
 	# print nstr
@@ -606,35 +607,68 @@ def getNeighbourCyclesAsNames(rows, cols, cycleName):
 	# print retest.get_cycle_as_nameString()
 	# print "==========="
 	return neighbourCycleNames
+
+def getAllPossibilities(rows, cols):
+	initCycle = HamiltonCycle(rows,cols,None)
+	initCycleName = initCycle.get_cycle_as_nameString("")
+	cyclesToInvestigate = set([initCycleName])
+	all = set([])
+	i = 0
+	while len(cyclesToInvestigate)>0:
+		
+		checkCycleName = cyclesToInvestigate.pop() #get the cycle to investigate
+		all.add(checkCycleName) #add cycle to found ones
+		# checkCycle = HamiltonCycle(rows,cols,None,checkCycleName)
+		
+		checkCycleNeighbourNames = getNeighbourCyclesAsNames(rows, cols, checkCycleName)
+		
+		for cycle in checkCycleNeighbourNames:
+			if cycle not in all:
+				cyclesToInvestigate.add(cycle)
+		if i % 1000 == 0:
+			print "-------stats----"
+			print len(cyclesToInvestigate)
+			print len(all)
+		if i% 100000 == 0:
+			fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_step{}.txt".format(ROWS,COLS,i),list(all))
+		i += 1
+	return all
+	
+	
+	
 	
 if __name__== "__main__":
 	path = [ (2, 1), (2, 0), (3, 0),(3,1),(3, 2), (3, 3), (3, 4), (3,5), (2, 5), (1, 5), (0, 5), (0, 4), (1, 4), (2, 4), (2, 3), (1, 3), (0,3), (0, 2), (0, 1), (0, 0), (1, 0), (1, 1), (1, 2), (2, 2),(2,1)]    #hamilton cycle
 	# path = [ (2, 1), (2, 0), (3, 0),(3,1)],[(3, 2), (3, 3), (3, 4), (3,5), (2, 5), (1, 5), (0, 5), (0, 4), (1, 4), (2, 4), (2, 3), (1, 3), (0,3), (0, 2), (0, 1), (0, 0), (1, 0), (1, 1), (1, 2), (2, 2)]    #valid paths
 	path = None
 	ROWS = 6
-	COLS = 6
-	ITERATIONS = 10
-	neighbourCycles = [path]
-	startName = "XXXXXX X XX X XX X XX X X"
-	for i in range(ITERATIONS):
-		# print "000000000"
-		# print i
+	COLS = 8
+	
+	allCycleNames = getAllPossibilities(ROWS,COLS)
+	fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols.txt".format(ROWS,COLS),list(allCycleNames))
+	print "done"
+	# ITERATIONS = 10
+	# neighbourCycles = [path]
+	# startName = "XXXXXX X XX X XX X XX X X"
+	# for i in range(ITERATIONS):
+		# # print "000000000"
+		# # print i
 		
-		# print len(neighbourCycles)
-		neighbourNames = getNeighbourCyclesAsNames(ROWS,COLS,startName)
-		startName = random.choice(neighbourNames)
-		print neighbourNames
-		# cycle = random.choice(neighbourCycles)
-		# cycle = neighbourCycles[-1]
+		# # print len(neighbourCycles)
+		# neighbourNames = getNeighbourCyclesAsNames(ROWS,COLS,startName)
+		# startName = random.choice(neighbourNames)
+		# print neighbourNames
+		# # cycle = random.choice(neighbourCycles)
+		# # cycle = neighbourCycles[-1]
 		
 
 		
-		# neighbourCycles = getNeighbourCycles(ROWS,COLS,cycle)
-		# print neighbourCycles
-	# for n in neighbourCycles:
-		# # print n
-		# # new = HamiltonCycle(ROWS,COLS,n)
-		# # new.print_cells_ASCII(False)
+		# # neighbourCycles = getNeighbourCycles(ROWS,COLS,cycle)
+		# # print neighbourCycles
+	# # for n in neighbourCycles:
+		# # # print n
+		# # # new = HamiltonCycle(ROWS,COLS,n)
+		# # # new.print_cells_ASCII(False)
 	
 	
 		
