@@ -625,12 +625,12 @@ def getAllPossibilities(rows, cols):
 		for cycle in checkCycleNeighbourNames:
 			if cycle not in all:
 				cyclesToInvestigate.add(cycle)
-		if i % 1000 == 0:
+		if i % 200 == 0:
 			print "-------stats----"
 			print len(cyclesToInvestigate)
 			print len(all)
-		if i% 100000 == 0:
-			fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_step{}.txt".format(ROWS,COLS,i),list(all))
+		if i% 500000 == 0:
+			fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_step{}.txt".format(ROWS,COLS,i),list(all)+ list(cyclesToInvestigate))
 		i += 1
 	return all
 	
@@ -641,7 +641,7 @@ if __name__== "__main__":
 	path = [ (2, 1), (2, 0), (3, 0),(3,1),(3, 2), (3, 3), (3, 4), (3,5), (2, 5), (1, 5), (0, 5), (0, 4), (1, 4), (2, 4), (2, 3), (1, 3), (0,3), (0, 2), (0, 1), (0, 0), (1, 0), (1, 1), (1, 2), (2, 2),(2,1)]    #hamilton cycle
 	# path = [ (2, 1), (2, 0), (3, 0),(3,1)],[(3, 2), (3, 3), (3, 4), (3,5), (2, 5), (1, 5), (0, 5), (0, 4), (1, 4), (2, 4), (2, 3), (1, 3), (0,3), (0, 2), (0, 1), (0, 0), (1, 0), (1, 1), (1, 2), (2, 2)]    #valid paths
 	path = None
-	ROWS = 6
+	ROWS = 8
 	COLS = 8
 	
 	allCycleNames = getAllPossibilities(ROWS,COLS)
