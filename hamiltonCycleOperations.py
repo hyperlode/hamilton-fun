@@ -528,8 +528,24 @@ class HamiltonCycle():
 
 		self.__splitPathsData.append({"cells": cellsWithSplitpoint, "splitCell": splitCell, "paths":[middlePath + [middlePath[0]], endNodePath + startNodePath + [endNodePath[0]]]})
 	
+	def get_cycle_as_detailed_nameString():
+		'''
+		name that has meaning for sorting and classification. According to cells.
 		
-	
+		3 elements:
+		-every ring has a letter: outer ring = A , then B, ...
+		-every side has an orientation: upper side = North, right side = East,...
+		-every cell per ring per side has a number. starting from zero,... 
+		
+		Corners are part of the "most clockwise" orientation.
+		
+		if rows and cols are equal, every cycle has four 90deg rotations, all mirrored = 8 cycles for one
+		if rows and cols not equal: 4 cycles for one.
+		
+		
+		
+		'''
+		pass
 def split_path_at_two_neighbours(path,splitA,splitB):
 	#old  __split_path_loop
 	# ASSERT:splitNode and checkNode are neighbours (direction unknown)
