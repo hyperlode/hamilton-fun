@@ -70,6 +70,8 @@ class HamiltonCycle():
 		path = self.__infillRecursive([(0,0)])
 		path = path + [path[0]]
 		return path
+	def get_cycle_as_tuple(self):
+		return tuple(self.__cycle)
 		
 	def __infillRecursive(self,path):
 		
@@ -383,22 +385,19 @@ class HamiltonCycle():
 	
 	def find_all_neighbour_hamilton_cycles(self):
 		self.find_split_cells()
-		# self.print_cells_ASCII(True)
+		
+		#find cells where cycle can be split
 		for cell in self.__splitCells:
 			self.split(cell)
-			
 		
-		
+		#for every splitcell there are two paths, for every two paths get all the recombinations. 
 		for splitPath in self.get_split_pathsData():
 			twoLoops = twoCyclesCoverAllPointsInLatticeOperations.TwoCycles(self.__lattice.rows(), self.__lattice.cols(),splitPath["paths"],splitPath["cells"],splitPath["splitCell"])
-			# twoLoops.find_recombination_cells()
-			# twoLoops.print_cells_ASCII()
 			twoLoops.find_all_hamilton_neighbours() #search the neighbours
 			self.__neighbourHamiltonCycles.extend(twoLoops.get_hamilton_cycles()) #get the neighbours
 		
-		#generalize the found cycles
-		self.__neighbourHamiltonCycles = [standardized_hamilton_cycle(test) for test in self.__neighbourHamiltonCycles]
-		#self.__neighbourHamiltonCycles = set(self.__neighbourHamiltonCycles)
+		#generalize the found cycles (all paths should start with 0,0)
+		self.__neighbourHamiltonCycles = [standardized_hamilton_cycle(cycle) for cycle in self.__neighbourHamiltonCycles]
 		
 			
 	def get_hamilton_cycle_neighbours(self):
@@ -608,6 +607,13 @@ def getNeighbourCyclesAsNames(rows, cols, cycleName):
 	# print "==========="
 	return neighbourCycleNames
 
+def getNeighbourCycles(rows, cols, cycleData):
+	cycle = HamiltonCycle(rows,cols,cycleData)
+	cycle.find_all_neighbour_hamilton_cycles()
+	neighbourCyclesData = cycle.get_hamilton_cycle_neighbours()
+	
+	return neighbourCyclesData
+	
 def getAllPossibilities(rows, cols):
 	initCycle = HamiltonCycle(rows,cols,None)
 	initCycleName = initCycle.get_cycle_as_nameString("")
@@ -629,13 +635,51 @@ def getAllPossibilities(rows, cols):
 			print "-------stats----"
 			print len(cyclesToInvestigate)
 			print len(all)
-		if i% 500000 == 0:
+		if i% 500000 == 0 and i > 400000:
 			fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_step{}.txt".format(ROWS,COLS,i),list(all)+ list(cyclesToInvestigate))
 		i += 1
 	return all
 	
 	
+def getAllPossibilities_fast(rows, cols):
+	initCycle = HamiltonCycle(rows,cols,None)
+	initCycleData = initCycle.get_cycle_as_tuple()
 	
+	# fileOperations.dumpDataPickle(tmp, r"c:\temp\tmpdata.txt")
+	# print fileOperations.retrieveDataPickle(r"c:\temp\tmpdata.txt")
+	# initCycleName = initCycle.get_cycle_as_nameString("")
+	cyclesToInvestigate = set( [])
+	cyclesToInvestigate.add(initCycleData)
+	
+	all = set([])
+	i = 0
+	while len(cyclesToInvestigate)>0:
+		
+		checkCycleData = cyclesToInvestigate.pop() #get the cycle to investigate
+		all.add(checkCycleData) #add cycle to found ones
+		checkCycleNeighboursData = getNeighbourCycles(rows, cols, list(checkCycleData))
+		
+		for cycle in checkCycleNeighboursData:
+			cycle_as_tuple = tuple(cycle)
+			if cycle_as_tuple not in all:
+				cyclesToInvestigate.add(cycle_as_tuple)
+		if i % 200 == 0:
+			print "-------stats----"
+			print len(cyclesToInvestigate)
+			print len(all)
+		# if i% 5 == 0 and i > 4:
+		if i% 500000 == 0 and i > 400000:
+			fileOperations.dumpDataPickle(all, r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_neighboursFound_step{}.txt".format(ROWS,COLS,i))
+			fileOperations.dumpDataPickle(cyclesToInvestigate, r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_neighboursToInvestigate_step{}.txt".format(ROWS,COLS,i))
+		i += 1
+	return all
+	
+def convertCyclesDataToNames(rows, cols, cyclesData):
+	cyclesNames = []
+	for cycleData in cyclesData:
+		cycle = HamiltonCycle(rows,cols,list(cycleData))
+		cyclesNames.append(cycle.get_cycle_as_nameString(""))
+	return cyclesNames
 	
 if __name__== "__main__":
 	path = [ (2, 1), (2, 0), (3, 0),(3,1),(3, 2), (3, 3), (3, 4), (3,5), (2, 5), (1, 5), (0, 5), (0, 4), (1, 4), (2, 4), (2, 3), (1, 3), (0,3), (0, 2), (0, 1), (0, 0), (1, 0), (1, 1), (1, 2), (2, 2),(2,1)]    #hamilton cycle
@@ -643,9 +687,25 @@ if __name__== "__main__":
 	path = None
 	ROWS = 8
 	COLS = 8
+	timePointAnchor = fileOperations.getTime()
+	 
+	allCyclesData = getAllPossibilities_fast(ROWS,COLS)
+	allCycleNames_A = convertCyclesDataToNames(ROWS, COLS, allCyclesData)
+	print len(allCycleNames_A)
 	
-	allCycleNames = getAllPossibilities(ROWS,COLS)
-	fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols.txt".format(ROWS,COLS),list(allCycleNames))
+	deltaT = fileOperations.getTime() - timePointAnchor
+	timePointAnchor = fileOperations.getTime() - timePointAnchor
+	print deltaT
+	
+	# allCycleNames = getAllPossibilities(ROWS,COLS)
+	# print len(allCycleNames)
+	
+	# deltaT = fileOperations.getTime() - timePointAnchor
+	# timePointAnchor = fileOperations.getTime() - timePointAnchor
+	# print deltaT
+	
+	fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_AAAA.txt".format(ROWS,COLS),list(allCycleNames_A))
+	# fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_BBBB.txt".format(ROWS,COLS),list(allCycleNames))
 	print "done"
 	# ITERATIONS = 10
 	# neighbourCycles = [path]
