@@ -528,7 +528,7 @@ class HamiltonCycle():
 
 		self.__splitPathsData.append({"cells": cellsWithSplitpoint, "splitCell": splitCell, "paths":[middlePath + [middlePath[0]], endNodePath + startNodePath + [endNodePath[0]]]})
 	
-	def get_cycle_as_detailed_nameString():
+	def get_cycle_as_detailed_nameString(self):
 		'''
 		name that has meaning for sorting and classification. According to cells.
 		
@@ -545,6 +545,70 @@ class HamiltonCycle():
 		
 		
 		'''
+		
+		cellRows = self.__lattice.rows() - 1
+		cellCols = self.__lattice.cols() - 1
+		
+		#check amount of rings:
+		#select highest number, if it is odd, add one, divide it by two.
+		keep,b = self.__lattice.rows(), self.__lattice.cols()
+		if keep<b:
+			keep,b = b,keep
+		
+		rings = keep/2
+		
+		#if a single cell is in the center, it will not be detected in the normal program flow, we will define it a North
+		if cellRows == cellCols:
+			centerCellAvailable = True
+		else:
+			centerCellAvailable = False
+			
+		if rings>26:
+			print "ASSERT ERROR: max 26 rings implemented..."
+			raise
+			
+		#name
+		for ringI, ring in enumerate(["A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","X","Y","Z"][:rings]):
+			print "ring:{}".format(ring)
+			
+			# for i in reversed(range (10)):
+				# print i
+			#NORTH
+			for i in range(cellCols - 1 - 2*ringI):
+				print ring+"N"+ str(i)
+				print "{},{}".format(ringI,i + ringI)
+			
+			#EAST
+			for i in range(cellRows - 1 - 2*ringI):
+				print ring+"E"+ str(i)
+				print "{},{}".format(i + ringI, cellCols - 1 - ringI)
+			
+			
+			#SOUTH
+			for i in range(cellCols - 1 - 2*ringI):
+				print ring+"S"+ str(i)
+				print "{},{}".format(cellRows - 1 - ringI, cellCols - 1 -  i - ringI)
+			
+			#WEST
+			for i in range(cellRows - 1 - 2*ringI):
+				print ring+"W"+ str(i)
+				print "{},{}".format( cellRows - 1 - i - ringI, ringI)
+			
+			# for dirI,direction in enumerate(["N","E","S","W"]):
+				# print ring + direction
+		
+		if centerCellAvailable:
+			print "ifjifjief"
+			print ringI
+			print ring+"N"+ str(0)
+			print "{},{}".format(  ringI, ringI)
+		#go over each cell
+
+		
+		#if empty cell, define it and add to string.
+		
+		#return string
+		
 		pass
 def split_path_at_two_neighbours(path,splitA,splitB):
 	#old  __split_path_loop
@@ -701,51 +765,31 @@ if __name__== "__main__":
 	path = [ (2, 1), (2, 0), (3, 0),(3,1),(3, 2), (3, 3), (3, 4), (3,5), (2, 5), (1, 5), (0, 5), (0, 4), (1, 4), (2, 4), (2, 3), (1, 3), (0,3), (0, 2), (0, 1), (0, 0), (1, 0), (1, 1), (1, 2), (2, 2),(2,1)]    #hamilton cycle
 	# path = [ (2, 1), (2, 0), (3, 0),(3,1)],[(3, 2), (3, 3), (3, 4), (3,5), (2, 5), (1, 5), (0, 5), (0, 4), (1, 4), (2, 4), (2, 3), (1, 3), (0,3), (0, 2), (0, 1), (0, 0), (1, 0), (1, 1), (1, 2), (2, 2)]    #valid paths
 	path = None
-	ROWS = 8
-	COLS = 8
-	timePointAnchor = fileOperations.getTime()
+	ROWS = 4
+	COLS = 4
+	print "ROWS:{}, COLS:{}".format(str(ROWS),str(COLS))
+	# # # timePointAnchor = fileOperations.getTime()
 	 
-	allCyclesData = getAllPossibilities_fast(ROWS,COLS)
-	allCycleNames_A = convertCyclesDataToNames(ROWS, COLS, allCyclesData)
-	print len(allCycleNames_A)
+	# # # allCyclesData = getAllPossibilities_fast(ROWS,COLS)
+	# # # allCycleNames_A = convertCyclesDataToNames(ROWS, COLS, allCyclesData)
+	# # # print len(allCycleNames_A)
 	
-	deltaT = fileOperations.getTime() - timePointAnchor
-	timePointAnchor = fileOperations.getTime() - timePointAnchor
-	print deltaT
+	# # # deltaT = fileOperations.getTime() - timePointAnchor
+	# # # timePointAnchor = fileOperations.getTime() - timePointAnchor
+	# # # print deltaT
 	
-	# allCycleNames = getAllPossibilities(ROWS,COLS)
-	# print len(allCycleNames)
+	# # # # allCycleNames = getAllPossibilities(ROWS,COLS)
+	# # # # print len(allCycleNames)
 	
-	# deltaT = fileOperations.getTime() - timePointAnchor
-	# timePointAnchor = fileOperations.getTime() - timePointAnchor
-	# print deltaT
+	# # # # deltaT = fileOperations.getTime() - timePointAnchor
+	# # # # timePointAnchor = fileOperations.getTime() - timePointAnchor
+	# # # # print deltaT
 	
-	fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_AAAA.txt".format(ROWS,COLS),list(allCycleNames_A))
-	# fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_BBBB.txt".format(ROWS,COLS),list(allCycleNames))
-	print "done"
-	# ITERATIONS = 10
-	# neighbourCycles = [path]
-	# startName = "XXXXXX X XX X XX X XX X X"
-	# for i in range(ITERATIONS):
-		# # print "000000000"
-		# # print i
-		
-		# # print len(neighbourCycles)
-		# neighbourNames = getNeighbourCyclesAsNames(ROWS,COLS,startName)
-		# startName = random.choice(neighbourNames)
-		# print neighbourNames
-		# # cycle = random.choice(neighbourCycles)
-		# # cycle = neighbourCycles[-1]
-		
-
-		
-		# # neighbourCycles = getNeighbourCycles(ROWS,COLS,cycle)
-		# # print neighbourCycles
-	# # for n in neighbourCycles:
-		# # # print n
-		# # # new = HamiltonCycle(ROWS,COLS,n)
-		# # # new.print_cells_ASCII(False)
+	# # # fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_AAAA.txt".format(ROWS,COLS),list(allCycleNames_A))
+	# # # # fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_BBBB.txt".format(ROWS,COLS),list(allCycleNames))
+	# # # print "done"
 	
+	initCycle = HamiltonCycle(ROWS,COLS,None)
+	initCycle.print_cells_ASCII(False)
+	initCycle.get_cycle_as_detailed_nameString()
 	
-		
-		# pass
