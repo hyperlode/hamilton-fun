@@ -557,51 +557,86 @@ class HamiltonCycle():
 		
 		rings = keep/2
 		
-		#if a single cell is in the center, it will not be detected in the normal program flow, we will define it a North
-		if cellRows == cellCols:
-			centerCellAvailable = True
-		else:
-			centerCellAvailable = False
+		# #if a single cell is in the center, it will not be detected in the normal program flow, we will define it a North
+		# if cellRows == cellCols:
+			# centerCellAvailable = True
+		# else:
+			# centerCellAvailable = False
 			
 		if rings>26:
 			print "ASSERT ERROR: max 26 rings implemented..."
 			raise
-			
+		
+		nameString = "HamiltonCycle_r{}c{}_openCells:".format(self.__lattice.rows(), self.__lattice.cols())
+		
 		#name
 		for ringI, ring in enumerate(["A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","X","Y","Z"][:rings]):
-			print "ring:{}".format(ring)
+			# print "ring:{}".format(ring)
 			
-			# for i in reversed(range (10)):
-				# print i
 			#NORTH
 			for i in range(cellCols - 1 - 2*ringI):
-				print ring+"N"+ str(i)
-				print "{},{}".format(ringI,i + ringI)
+				if self.__cells[(ringI,i + ringI)] == CELL_OUTSIDE:
+					nameString += ring+"1N"+ str(i) + "-"
+				# print "{},{}".format(ringI,i + ringI)
 			
 			#EAST
 			for i in range(cellRows - 1 - 2*ringI):
-				print ring+"E"+ str(i)
-				print "{},{}".format(i + ringI, cellCols - 1 - ringI)
-			
+				if self.__cells[(i + ringI, cellCols - 1 - ringI)] == CELL_OUTSIDE:
+					nameString += ring+"2E"+ str(i) + "-"
+				# print "{},{}".format(i + ringI, cellCols - 1 - ringI)
 			
 			#SOUTH
 			for i in range(cellCols - 1 - 2*ringI):
-				print ring+"S"+ str(i)
-				print "{},{}".format(cellRows - 1 - ringI, cellCols - 1 -  i - ringI)
-			
+				if self.__cells[(cellRows - 1 - ringI, cellCols - 1 -  i - ringI)] == CELL_OUTSIDE:
+					nameString += ring+"3S"+ str(i) + "-"
+				# print "{},{}".format(cellRows - 1 - ringI, cellCols - 1 -  i - ringI)
+				
 			#WEST
 			for i in range(cellRows - 1 - 2*ringI):
-				print ring+"W"+ str(i)
-				print "{},{}".format( cellRows - 1 - i - ringI, ringI)
+				if self.__cells[( cellRows - 1 - i - ringI, ringI)] == CELL_OUTSIDE:
+					nameString += ring+"4W"+ str(i) + "-"
+				# print "{},{}".format( cellRows - 1 - i - ringI, ringI)
 			
-			# for dirI,direction in enumerate(["N","E","S","W"]):
-				# print ring + direction
+		#the center cell in rows==cols lattices is an exception, and defined as North.
+		if cellRows == cellCols:
+			if self.__cells[(ringI, ringI)] == CELL_OUTSIDE:
+				nameString += ring+"1N0" + "-"
+			# print "{},{}".format(  ringI, ringI)
+			
+			
+		return nameString[:-1]
+		# # # #name
+		# # # for ringI, ring in enumerate(["A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","X","Y","Z"][:rings]):
+			# # # print "ring:{}".format(ring)
+			
+			# # # #NORTH
+			# # # for i in range(cellCols - 1 - 2*ringI):
+				# # # print ring+"N"+ str(i)
+				# # # print "{},{}".format(ringI,i + ringI)
+			
+			# # # #EAST
+			# # # for i in range(cellRows - 1 - 2*ringI):
+				# # # print ring+"E"+ str(i)
+				# # # print "{},{}".format(i + ringI, cellCols - 1 - ringI)
+			
+			
+			# # # #SOUTH
+			# # # for i in range(cellCols - 1 - 2*ringI):
+				# # # print ring+"S"+ str(i)
+				# # # print "{},{}".format(cellRows - 1 - ringI, cellCols - 1 -  i - ringI)
+			
+			# # # #WEST
+			# # # for i in range(cellRows - 1 - 2*ringI):
+				# # # print ring+"W"+ str(i)
+				# # # print "{},{}".format( cellRows - 1 - i - ringI, ringI)
+			
+		# # # #the center cell in rows==cols lattices is an exception, and defined as North.
+		# # # if cellRows == cellCols:
+			# # # print ring+"N"+ str(0)
+			# # # print "{},{}".format(  ringI, ringI)
+			
+
 		
-		if centerCellAvailable:
-			print "ifjifjief"
-			print ringI
-			print ring+"N"+ str(0)
-			print "{},{}".format(  ringI, ringI)
 		#go over each cell
 
 		
@@ -752,6 +787,7 @@ def getAllPossibilities_fast(rows, cols):
 			fileOperations.dumpDataPickle(all, r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_neighboursFound_step{}.txt".format(ROWS,COLS,i))
 			fileOperations.dumpDataPickle(cyclesToInvestigate, r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_neighboursToInvestigate_step{}.txt".format(ROWS,COLS,i))
 		i += 1
+	
 	return all
 	
 def convertCyclesDataToNames(rows, cols, cyclesData):
@@ -760,23 +796,31 @@ def convertCyclesDataToNames(rows, cols, cyclesData):
 		cycle = HamiltonCycle(rows,cols,list(cycleData))
 		cyclesNames.append(cycle.get_cycle_as_nameString(""))
 	return cyclesNames
+
+def convertCyclesDataToDetailedNames(rows, cols, cyclesData):
+	cyclesNames = []
+	for cycleData in cyclesData:
+		cycle = HamiltonCycle(rows,cols,list(cycleData))
+		cyclesNames.append(cycle.get_cycle_as_detailed_nameString())
+	return cyclesNames
+
 	
 if __name__== "__main__":
 	path = [ (2, 1), (2, 0), (3, 0),(3,1),(3, 2), (3, 3), (3, 4), (3,5), (2, 5), (1, 5), (0, 5), (0, 4), (1, 4), (2, 4), (2, 3), (1, 3), (0,3), (0, 2), (0, 1), (0, 0), (1, 0), (1, 1), (1, 2), (2, 2),(2,1)]    #hamilton cycle
 	# path = [ (2, 1), (2, 0), (3, 0),(3,1)],[(3, 2), (3, 3), (3, 4), (3,5), (2, 5), (1, 5), (0, 5), (0, 4), (1, 4), (2, 4), (2, 3), (1, 3), (0,3), (0, 2), (0, 1), (0, 0), (1, 0), (1, 1), (1, 2), (2, 2)]    #valid paths
 	path = None
-	ROWS = 4
-	COLS = 4
+	ROWS = 6
+	COLS = 6
 	print "ROWS:{}, COLS:{}".format(str(ROWS),str(COLS))
-	# # # timePointAnchor = fileOperations.getTime()
+	timePointAnchor = fileOperations.getTime()
 	 
-	# # # allCyclesData = getAllPossibilities_fast(ROWS,COLS)
-	# # # allCycleNames_A = convertCyclesDataToNames(ROWS, COLS, allCyclesData)
-	# # # print len(allCycleNames_A)
+	allCyclesData = getAllPossibilities_fast(ROWS,COLS)
+	allCycleNames_A = convertCyclesDataToDetailedNames(ROWS, COLS, allCyclesData)
+	print len(allCycleNames_A)
 	
-	# # # deltaT = fileOperations.getTime() - timePointAnchor
-	# # # timePointAnchor = fileOperations.getTime() - timePointAnchor
-	# # # print deltaT
+	deltaT = fileOperations.getTime() - timePointAnchor
+	timePointAnchor = fileOperations.getTime() - timePointAnchor
+	print deltaT
 	
 	# # # # allCycleNames = getAllPossibilities(ROWS,COLS)
 	# # # # print len(allCycleNames)
@@ -785,11 +829,11 @@ if __name__== "__main__":
 	# # # # timePointAnchor = fileOperations.getTime() - timePointAnchor
 	# # # # print deltaT
 	
-	# # # fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_AAAA.txt".format(ROWS,COLS),list(allCycleNames_A))
+	fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_detailedNameString.txt".format(ROWS,COLS),list(allCycleNames_A))
 	# # # # fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_BBBB.txt".format(ROWS,COLS),list(allCycleNames))
 	# # # print "done"
 	
-	initCycle = HamiltonCycle(ROWS,COLS,None)
-	initCycle.print_cells_ASCII(False)
-	initCycle.get_cycle_as_detailed_nameString()
+	# initCycle = HamiltonCycle(ROWS,COLS,None)
+	# initCycle.print_cells_ASCII(False)
+	# print initCycle.get_cycle_as_detailed_nameString()
 	
