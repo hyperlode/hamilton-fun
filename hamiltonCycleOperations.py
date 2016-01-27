@@ -182,7 +182,7 @@ class HamiltonCycle():
 			neighboursOnPath.add(path[1]) #second element of list
 		return neighboursOnPath
 	
-	def cells_to_string(self, rowDivider = None, withExtraInfo  = False):
+	def cells_to_string(self, rowDivider = None, withExtraInfo  = False, asListOfStrings = False):
 		#rowDivider is a string one or more character to put between rows, or value is ROWNUMBER, it will then output the rowNumber as divider
 		
 		newLineChar  = rowDivider
@@ -191,7 +191,11 @@ class HamiltonCycle():
 		else:
 			cells = self.__cells
 		
-		printcells = ""
+		if asListOfStrings:
+			printcells = []
+		else:
+			printcells = ""
+		
 		
 		for row in range(self.__lattice.rows() - 1):
 			printrow = ""
@@ -208,17 +212,22 @@ class HamiltonCycle():
 					printrow += "o"
 				else:
 					printrow += "?"
-			if rowDivider == "ROWNUMBER":
-				# newLineChar = str(row + 1)
-				newLineChar = '{number:0{width}d}'.format(width=len(str(self.__lattice.rows() - 2)), number=row+1)
-			if newLineChar is not None:
-				printcells += printrow + newLineChar
+					
+			if asListOfStrings:
+				printcells.append(printrow)
 			else:
-				printcells += printrow
+				if rowDivider == "ROWNUMBER":
+					# newLineChar = str(row + 1)
+					newLineChar = '{number:0{width}d}'.format(width=len(str(self.__lattice.rows() - 2)), number=row+1)
+				if newLineChar is not None:
+					printcells += printrow + newLineChar
+				else:
+					printcells += printrow
 		
-		if newLineChar is not None and len(newLineChar)>0:
+		if not asListOfStrings and newLineChar is not None and len(newLineChar)>0:
 			#no divider on end of string.
 			printcells = printcells[:-len(newLineChar)]
+			
 		return printcells
 		
 		
@@ -230,7 +239,66 @@ class HamiltonCycle():
 	def get_cycle_as_nameString(self, rowDivider = "", withExtraInfo = False):
 		# rowDivider ="ROWNUMBER"   #my little baby, but unnecessary overkill!
 		return self.cells_to_string(rowDivider = rowDivider, withExtraInfo = withExtraInfo)
-			
+	
+	def get_isoMorphs_as_nameString(self, noFlippedOnes = False):
+		baseNameAsList = self.cells_to_string( rowDivider = None, withExtraInfo  = False, asListOfStrings = True)
+		# baseNameAsList = ["123","456"]
+		
+		baseNameString = "".join(baseNameAsList)
+		
+		isoMorphs = [] 
+		
+		# print baseNameString
+		
+		#180deg
+		rot180 = baseNameString[::-1]
+		# print rot180
+		# isoMorphs.append(rot180)
+		#flipHori
+		flipHori = "".join([ row[::-1] for row in baseNameAsList ])
+		# print flipHori
+		# isoMorphs.append(flipHori)
+		#flipVert
+		flipVert = "".join(baseNameAsList[::-1])
+		# print flipVert
+		# isoMorphs.append(flipVert)
+		#90deg
+		rot90 = []
+		# print self.__lattice.cols()
+		for col in range(self.__lattice.cols() -1):
+		# for col in range(3):
+			# print "lode"
+			transposedRow = ""
+			# print self.__lattice.rows()
+			for row in range(self.__lattice.rows() - 1):
+			# for row in range(2):
+				# print "brecht"
+				transposedRow += baseNameAsList[row][col]
+			rot90.append(transposedRow)
+		
+		rot90String = "".join(rot90)
+		# print rot90String
+		# isoMorphs.append(rot90String)
+		#rot 90 hori flip
+		rot90HoriFlip = "".join([row[::-1] for row in rot90])
+		# print rot90HoriFlip
+		# isoMorphs.append(rot90HoriFlip)
+		#rot270
+		rot270String = rot90String[::-1]
+		# print rot270String
+		# isoMorphs.append(rot270String)
+		#rot 90 flip vert
+		rot90FlipVert = "".join(rot90[::-1])
+		# print rot90FlipVert 
+		# isoMorphs.append(rot90FlipVert)
+		
+		if noFlippedOnes:
+			return [baseNameString, rot90HoriFlip,rot180,rot90FlipVert]
+		else:
+			return [baseNameString, rot90HoriFlip,rot180,rot90FlipVert ,   flipHori,rot270String,flipVert,rot90String]
+		
+		# return isoMorphs
+	
 	def cells_from_nameString(self,rows,cols,nameString):
 		#dangerous! check result!
 		#create all outside cells for this situation
@@ -804,23 +872,52 @@ def convertCyclesDataToDetailedNames(rows, cols, cyclesData):
 		cyclesNames.append(cycle.get_cycle_as_detailed_nameString())
 	return cyclesNames
 
+
+def printIsoMorphs(rows, cols, withFlippedOnes = True, cycleData = None, addRandomness = True):
+	if cycleData is None:
+		print "creating own cycledata with some iterations..."
+		startCycle = None
+		for i in range(100):
+			initCycle = HamiltonCycle(ROWS,COLS,startCycle)
+			initCycle.find_all_neighbour_hamilton_cycles()
+			if addRandomness:
+				startCycle = random.choice(initCycle.get_hamilton_cycle_neighbours())
+			else:
+				startCycle = initCycle.get_hamilton_cycle_neighbours()[1]
+		
+	else:
+		initCycle = HamiltonCycle(ROWS,COLS,cycleData)
+	print "original cycle:"
+	initCycle.print_cells_ASCII(False)	
+	print "all isomorphs:"
+	isoMorphs =  initCycle.get_isoMorphs_as_nameString()
+		
+	
+	for isoMorph in isoMorphs:
+		initCycle = HamiltonCycle(ROWS,COLS,None,isoMorph)
+		initCycle.print_cells_ASCII(False)	
+		print ""
 	
 if __name__== "__main__":
 	path = [ (2, 1), (2, 0), (3, 0),(3,1),(3, 2), (3, 3), (3, 4), (3,5), (2, 5), (1, 5), (0, 5), (0, 4), (1, 4), (2, 4), (2, 3), (1, 3), (0,3), (0, 2), (0, 1), (0, 0), (1, 0), (1, 1), (1, 2), (2, 2),(2,1)]    #hamilton cycle
 	# path = [ (2, 1), (2, 0), (3, 0),(3,1)],[(3, 2), (3, 3), (3, 4), (3,5), (2, 5), (1, 5), (0, 5), (0, 4), (1, 4), (2, 4), (2, 3), (1, 3), (0,3), (0, 2), (0, 1), (0, 0), (1, 0), (1, 1), (1, 2), (2, 2)]    #valid paths
 	path = None
-	ROWS = 6
-	COLS = 6
+	ROWS = 8
+	COLS = 8
 	print "ROWS:{}, COLS:{}".format(str(ROWS),str(COLS))
-	timePointAnchor = fileOperations.getTime()
-	 
-	allCyclesData = getAllPossibilities_fast(ROWS,COLS)
-	allCycleNames_A = convertCyclesDataToDetailedNames(ROWS, COLS, allCyclesData)
-	print len(allCycleNames_A)
 	
-	deltaT = fileOperations.getTime() - timePointAnchor
-	timePointAnchor = fileOperations.getTime() - timePointAnchor
-	print deltaT
+	
+	
+	
+	# timePointAnchor = fileOperations.getTime()
+	 
+	# allCyclesData = getAllPossibilities_fast(ROWS,COLS)
+	# allCycleNames_A = convertCyclesDataToDetailedNames(ROWS, COLS, allCyclesData)
+	# print len(allCycleNames_A)
+	
+	# deltaT = fileOperations.getTime() - timePointAnchor
+	# timePointAnchor = fileOperations.getTime() - timePointAnchor
+	# print deltaT
 	
 	# # # # allCycleNames = getAllPossibilities(ROWS,COLS)
 	# # # # print len(allCycleNames)
@@ -829,11 +926,13 @@ if __name__== "__main__":
 	# # # # timePointAnchor = fileOperations.getTime() - timePointAnchor
 	# # # # print deltaT
 	
-	fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_detailedNameString.txt".format(ROWS,COLS),list(allCycleNames_A))
+	# fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_detailedNameString.txt".format(ROWS,COLS),list(allCycleNames_A))
 	# # # # fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_BBBB.txt".format(ROWS,COLS),list(allCycleNames))
 	# # # print "done"
 	
 	# initCycle = HamiltonCycle(ROWS,COLS,None)
 	# initCycle.print_cells_ASCII(False)
-	# print initCycle.get_cycle_as_detailed_nameString()
+	# neighbours = initCycle.getNeighbourCycles()
 	
+	
+	printIsoMorphs(ROWS, COLS, True, None, True)
