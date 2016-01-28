@@ -240,13 +240,13 @@ class HamiltonCycle():
 		# rowDivider ="ROWNUMBER"   #my little baby, but unnecessary overkill!
 		return self.cells_to_string(rowDivider = rowDivider, withExtraInfo = withExtraInfo)
 	
-	def get_isoMorphs_as_nameString(self, noFlippedOnes = False):
+	def get_isoMorphs_as_nameString(self, noFlippedOnes = False, includeOriginalName = False):
 		baseNameAsList = self.cells_to_string( rowDivider = None, withExtraInfo  = False, asListOfStrings = True)
 		# baseNameAsList = ["123","456"]
 		
 		baseNameString = "".join(baseNameAsList)
 		
-		isoMorphs = [] 
+		
 		
 		# print baseNameString
 		
@@ -292,13 +292,22 @@ class HamiltonCycle():
 		# print rot90FlipVert 
 		# isoMorphs.append(rot90FlipVert)
 		
-		if noFlippedOnes:
-			return [baseNameString, rot90HoriFlip,rot180,rot90FlipVert]
-		else:
-			return [baseNameString, rot90HoriFlip,rot180,rot90FlipVert ,   flipHori,rot270String,flipVert,rot90String]
+		isoMorphs = [] 
 		
-		# return isoMorphs
-	
+		#add original path
+		if includeOriginalName:
+			isoMorphs.append(baseNameString)
+		
+		#add rotations
+		isoMorphs.extend([rot90HoriFlip,rot180,rot90FlipVert])
+		
+		#add flipped rotations
+		if not noFlippedOnes:
+			isoMorphs.extend( [ flipHori,rot270String,flipVert,rot90String])
+		
+		
+		return isoMorphs
+		
 	def cells_from_nameString(self,rows,cols,nameString):
 		#dangerous! check result!
 		#create all outside cells for this situation
@@ -766,29 +775,28 @@ def getNeighbourCycles(rows, cols, path):
 	# print "==========="
 	return neighbourCycles
 
-def getNeighbourCyclesAsNames(rows, cols, cycleName):
+def getNeighbourCyclesAsNames(rows, cols, cycleName, includeIsoMorphs = False):
+	#if includeIsoMorphs==True will also include all rotations and symmetricals from every neighbour
+	
 	cycle = HamiltonCycle(rows,cols,None,cycleName)
-	# cycle.print_cells_ASCII(True)
-	# nstr = cycle.get_cycle_as_nameString("")
 	
 	cycle.find_all_neighbour_hamilton_cycles()
 	
 	neighbourCycleNames = []
+	neighbourCycleNamesIsoMorphs_set = set([])
+	
 	neighbourCycles = cycle.get_hamilton_cycle_neighbours()
 	for cycle in neighbourCycles:
 		nameCycle = HamiltonCycle(ROWS,COLS,cycle)
-		# nameCycle.print_cells_ASCII()
-		# print "\n"
 		neighbourCycleNames.append(nameCycle.get_cycle_as_nameString(""))
 		
-	# print nstr
-	# retest = HamiltonCycle(ROWS,COLS,None,nstr)
-	# print "=======!!!!!===="
-	# retest.print_cells_ASCII(True)
-	
-	# print retest.get_cycle_as_nameString()
-	# print "==========="
-	return neighbourCycleNames
+		if includeIsoMorphs:
+			neighbourCycleNamesIsoMorphs_set |= set(nameCycle.get_isoMorphs_as_nameString(noFlippedOnes = False, includeOriginalName = False))
+		
+	if includeIsoMorphs:
+		return neighbourCycleNames, neighbourCycleNamesIsoMorphs_set
+	else:
+		return neighbourCycleNames
 
 def getNeighbourCycles(rows, cols, cycleData):
 	cycle = HamiltonCycle(rows,cols,cycleData)
@@ -857,6 +865,45 @@ def getAllPossibilities_fast(rows, cols):
 		i += 1
 	
 	return all
+
+def getAllPossibilities_super_fast(rows, cols):
+	#from every neighbour, also takes isomorphs (rotations and symmetries) right away.
+	
+	initCycle = HamiltonCycle(rows,cols,None)
+	initCycleName = initCycle.get_cycle_as_nameString("")
+	cyclesToInvestigate = set([initCycleName])
+	all = set([])
+	i = 0
+	while len(cyclesToInvestigate)>0:
+		
+		checkCycleName = cyclesToInvestigate.pop() #get the cycle to investigate
+		 #add cycle to found ones
+		
+		checkCycleNeighbourNames, isoMorphs_set = getNeighbourCyclesAsNames(rows, cols, checkCycleName, True)
+		# checkCycleNeighbourNames = getNeighbourCyclesAsNames(rows, cols, checkCycleName, False)
+		
+		
+		
+		
+		
+		for cycle in checkCycleNeighbourNames:
+			if cycle not in all:
+				cyclesToInvestigate.add(cycle)
+		
+		all |= isoMorphs_set
+		all.add(checkCycleName)
+
+		
+		if i % 200 == 0:
+			print "-------stats----"
+			print len(cyclesToInvestigate)
+			print len(all)
+			# print checkCycleNeighbourNames
+			
+		if i% 500000 == 0 and i > 400000:
+			fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_step{}.txt".format(ROWS,COLS,i),list(all)+ list(cyclesToInvestigate))
+		i += 1
+	return all
 	
 def convertCyclesDataToNames(rows, cols, cyclesData):
 	cyclesNames = []
@@ -866,11 +913,18 @@ def convertCyclesDataToNames(rows, cols, cyclesData):
 	return cyclesNames
 
 def convertCyclesDataToDetailedNames(rows, cols, cyclesData):
-	cyclesNames = []
+	detailedNames = []
 	for cycleData in cyclesData:
 		cycle = HamiltonCycle(rows,cols,list(cycleData))
-		cyclesNames.append(cycle.get_cycle_as_detailed_nameString())
-	return cyclesNames
+		detailedNames.append(cycle.get_cycle_as_detailed_nameString())
+	return detailedNames
+
+def convertCyclesNamesToDetailedNames(rows, cols, cyclesNames):
+	detailedNames = []
+	for name in cyclesNames:
+		cycle = HamiltonCycle(rows,cols,None, name)
+		detailedNames.append(cycle.get_cycle_as_detailed_nameString())
+	return detailedNames
 
 
 def printIsoMorphs(rows, cols, withFlippedOnes = True, cycleData = None, addRandomness = True):
@@ -909,30 +963,38 @@ if __name__== "__main__":
 	
 	
 	
-	# timePointAnchor = fileOperations.getTime()
+	timePointAnchor = fileOperations.getTime()
 	 
 	# allCyclesData = getAllPossibilities_fast(ROWS,COLS)
 	# allCycleNames_A = convertCyclesDataToDetailedNames(ROWS, COLS, allCyclesData)
 	# print len(allCycleNames_A)
-	
+	# fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_detailedNameString.txt".format(ROWS,COLS),list(allCycleNames_A))
 	# deltaT = fileOperations.getTime() - timePointAnchor
 	# timePointAnchor = fileOperations.getTime() - timePointAnchor
 	# print deltaT
 	
-	# # # # allCycleNames = getAllPossibilities(ROWS,COLS)
-	# # # # print len(allCycleNames)
+	# allCyclesData = getAllPossibilities(ROWS,COLS)
+	# allCycleNames_A = convertCyclesDataToDetailedNames(ROWS, COLS, allCyclesData)
+	# print len(allCycleNames_A)
+	# deltaT = fileOperations.getTime() - timePointAnchor
+	# timePointAnchor = fileOperations.getTime() - timePointAnchor
+	# print deltaT
 	
-	# # # # deltaT = fileOperations.getTime() - timePointAnchor
-	# # # # timePointAnchor = fileOperations.getTime() - timePointAnchor
-	# # # # print deltaT
+	allCycleNames = getAllPossibilities_super_fast(ROWS,COLS)
+	allCycleNames_A = convertCyclesNamesToDetailedNames(ROWS, COLS, allCycleNames)
+	fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_detailedNameString.txt".format(ROWS,COLS),allCycleNames_A)
+	print len(allCycleNames)
+	deltaT = fileOperations.getTime() - timePointAnchor
+	timePointAnchor = fileOperations.getTime() - timePointAnchor
+	print deltaT
 	
 	# fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_detailedNameString.txt".format(ROWS,COLS),list(allCycleNames_A))
-	# # # # fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_BBBB.txt".format(ROWS,COLS),list(allCycleNames))
-	# # # print "done"
+	# fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_BBBB.txt".format(ROWS,COLS),list(allCycleNames))
+	print "done"
 	
 	# initCycle = HamiltonCycle(ROWS,COLS,None)
 	# initCycle.print_cells_ASCII(False)
 	# neighbours = initCycle.getNeighbourCycles()
 	
 	
-	printIsoMorphs(ROWS, COLS, True, None, True)
+	# printIsoMorphs(ROWS, COLS, True, None, True)
