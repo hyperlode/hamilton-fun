@@ -3,6 +3,9 @@ import twoCyclesCoverAllPointsInLatticeOperations
 import random 
 import graphs
 import fileOperations
+from pympler.tracker import SummaryTracker #http://stackoverflow.com/questions/1435415/python-memory-leaks
+# tracker = SummaryTracker()
+
 
 CELL_INSIDE = 0
 CELL_OUTSIDE = 1 
@@ -15,6 +18,7 @@ class HamiltonCycle():
 	def __init__(self, lattice_rows, lattice_cols, cycle,cycleByName = None):
 		self.__lattice = latticeOperations.Lattice(lattice_rows, lattice_cols)
 		
+		
 		if cycleByName is not None:
 			#generate cycle from given name
 			
@@ -26,7 +30,10 @@ class HamiltonCycle():
 			# cycle = self.__lattice.find_hamilton_cycle()
 			# print cycle
 			cycle = self.do_manual_infill()
-		
+		else:
+			#if cycle provided as tuple of tuples, convert it to a list.
+			cycle = list(cycle)
+			
 		#let path start from (0,0)  here we don't yet really check for hamilton, but if error, we know it is wrong already
 		try:
 			cycle = standardized_hamilton_cycle(cycle)
@@ -70,9 +77,7 @@ class HamiltonCycle():
 		path = self.__infillRecursive([(0,0)])
 		path = path + [path[0]]
 		return path
-	def get_cycle_as_tuple(self):
-		return tuple(self.__cycle)
-		
+	
 	def __infillRecursive(self,path):
 		
 		n = path[-1]
@@ -235,7 +240,10 @@ class HamiltonCycle():
 		
 		print self.cells_to_string("\n", withExtraInfo)
 	
-	# def get_cycle_as_nameString(self, rowDivider = "_",withExtraInfo = False):
+	def get_cycle_as_tuple(self):
+		return tuple(self.__cycle)
+		
+	
 	def get_cycle_as_nameString(self, rowDivider = "", withExtraInfo = False):
 		# rowDivider ="ROWNUMBER"   #my little baby, but unnecessary overkill!
 		return self.cells_to_string(rowDivider = rowDivider, withExtraInfo = withExtraInfo)
@@ -479,7 +487,10 @@ class HamiltonCycle():
 			
 	def get_hamilton_cycle_neighbours(self):
 		return self.__neighbourHamiltonCycles
-			
+	
+	def get_hamilton_cycle_neighbours_as_tuples(self):
+		return [ tuple(neighbour) for neighbour in self.__neighbourHamiltonCycles]
+	
 	def find_split_cells(self):
 		#find all potential split cells in path or cycle.  
 		#  cell (0,0) with its corner nodes:
@@ -746,34 +757,84 @@ def split_path_at_two_neighbours(path,splitA,splitB):
 	
 	return [pathA,pathB]
 		
+def get_isoMorphs_as_tuples(baseCycle, rows, cols, noFlippedOnes = False, includeOriginalName = False, ifRowsAndColsNotEqualAllowRowsColsSwap = False):
+	#ifRowsAndColsNotEqualAllowRowsColsSwap = if rows and cols are not the same, the shape will be changed when rotated, allow for this??
+	#baseCycle as list of tuples. 
+	#https://en.wikipedia.org/wiki/Rotation_matrix
+	#see path coords as carthesian coords. Do rotations, but they will rotate with origina as centerpoint. So, translate again.
+	
+	isoMorphs = []
+	if includeOriginalName:
+		isoMorphs.append(baseCycle)
+	
+	
+	if rows != cols and not ifRowsAndColsNotEqualAllowRowsColsSwap:
+		#MIND YOU: normally rotation is CCW, but we go CW
+		#180deg
+		isoMorphs.append([ (-r + rows - 1, -c + cols - 1) for r,c in baseCycle])
+		if not noFlippedOnes:
+			#flip horizontally (vertical flip axis )
+			baseCycle_horiFlip = [ (r, - c + cols - 1) for r,c in baseCycle]
+			isoMorphs.append(baseCycle_horiFlip)
+			#180deg
+			isoMorphs.append([ (-r + rows - 1, -c + cols - 1) for r,c in baseCycle_horiFlip])
+			
+	else:
+		
+		#MIND YOU: normally rotation is CCW, but we go CW
+		#90deg
+		isoMorphs.append([ (c, - r + rows - 1) for r,c in baseCycle])
+		#180deg
+		isoMorphs.append([ (-r + rows - 1, -c + cols - 1) for r,c in baseCycle])
+		#270 deg
+		isoMorphs.append([ (-c + cols - 1, r ) for r,c in baseCycle])
+		
+		if not noFlippedOnes:
+			#flip horizontally (vertical flip axis )
+			baseCycle_horiFlip = [ (r, - c + cols - 1) for r,c in baseCycle]
+			isoMorphs.append(baseCycle_horiFlip)
+			#90deg
+			isoMorphs.append([ (c, - r + rows - 1) for r,c in baseCycle_horiFlip])
+			#180deg
+			isoMorphs.append([ (-r + rows - 1, -c + cols - 1) for r,c in baseCycle_horiFlip])
+			#270 deg
+			isoMorphs.append([ (-c + cols - 1, r ) for r,c in baseCycle_horiFlip])
+		
+		
+		
+	
+	isoMorphsStandardized = []
+	for path in isoMorphs:
+		# print path
+		isoMorphsStandardized.append(tuple(standardized_hamilton_cycle(path)))
+		
+		
+	return set(isoMorphsStandardized)
 	
 		
 def standardized_hamilton_cycle(path):
 	#assert hamilton cycle with (row,col) tuples, first and last tuple equal
 	#so it always starts with (0,0) and ends with (0,0)
-	
-	if path[0] ==(0,0):
-		return path
-	else:
+	# set start element
+	if not path[0] ==(0,0):
 		path = path[:-1]
 		i = path.index((0,0))
-		return path[i:]+ path[:i] +[(0,0)]
+		path = path[i:]+ path[:i] +[(0,0)]
+	
+	#set direction
+	if not path[1] == (0,1):
+		path = path[::-1]
 		
-def getNeighbourCycles(rows, cols, path):
-	cycle = HamiltonCycle(ROWS,COLS,path)
-	# cycle.print_cells_ASCII(True)
-	nstr = cycle.get_cycle_as_nameString("")
+	return path
+# def getNeighbourCycles(rows, cols, path):
+	# cycle = HamiltonCycle(ROWS,COLS,path)
+	# # cycle.print_cells_ASCII(True)
+	# nstr = cycle.get_cycle_as_nameString("")
 	
-	cycle.find_all_neighbour_hamilton_cycles()
-	neighbourCycles = cycle.get_hamilton_cycle_neighbours()
-	# print nstr
-	# retest = HamiltonCycle(ROWS,COLS,None,nstr)
-	# print "=======!!!!!===="
-	# retest.print_cells_ASCII(True)
+	# cycle.find_all_neighbour_hamilton_cycles()
+	# neighbourCycles = cycle.get_hamilton_cycle_neighbours()
 	
-	# print retest.get_cycle_as_nameString()
-	# print "==========="
-	return neighbourCycles
+	# return neighbourCycles
 
 def getNeighbourCyclesAsNames(rows, cols, cycleName, includeIsoMorphs = False):
 	#if includeIsoMorphs==True will also include all rotations and symmetricals from every neighbour
@@ -871,6 +932,8 @@ def getAllPossibilities_super_fast(rows, cols):
 	
 	initCycle = HamiltonCycle(rows,cols,None)
 	initCycleName = initCycle.get_cycle_as_nameString("")
+	
+	
 	cyclesToInvestigate = set([initCycleName])
 	all = set([])
 	i = 0
@@ -880,11 +943,7 @@ def getAllPossibilities_super_fast(rows, cols):
 		 #add cycle to found ones
 		
 		checkCycleNeighbourNames, isoMorphs_set = getNeighbourCyclesAsNames(rows, cols, checkCycleName, True)
-		# checkCycleNeighbourNames = getNeighbourCyclesAsNames(rows, cols, checkCycleName, False)
-		
-		
-		
-		
+			
 		
 		for cycle in checkCycleNeighbourNames:
 			if cycle not in all:
@@ -904,6 +963,57 @@ def getAllPossibilities_super_fast(rows, cols):
 			fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_step{}.txt".format(ROWS,COLS,i),list(all)+ list(cyclesToInvestigate))
 		i += 1
 	return all
+	
+	
+	
+def getAllPossibilities_mega_fast(rows, cols):
+	#from every neighbour, also takes isomorphs (rotations and symmetries) right away.
+	
+	initCycle = HamiltonCycle(rows,cols,None)
+	initCycleData = initCycle.get_cycle_as_tuple()
+	cyclesToInvestigate = set([initCycleData])
+	all = set([])
+	i = 0
+	while len(cyclesToInvestigate)>0:
+		
+		checkCycleData = cyclesToInvestigate.pop() #get the cycle to investigate
+		 #add cycle to found ones
+		
+		cycle = HamiltonCycle(rows,cols,checkCycleData)
+		cycle.find_all_neighbour_hamilton_cycles()
+		neighbourCyclesData = cycle.get_hamilton_cycle_neighbours_as_tuples() 
+		
+		
+
+		isoMorphs = get_isoMorphs_as_tuples(checkCycleData,rows, cols, False,True ,False) 
+		
+		# isoMorphs = cycle.get_isoMorphs_as_tuples(True,True)
+		
+		for neighbourCycle in neighbourCyclesData:
+			#get all isoMorphs
+			
+			isoMorphs|= get_isoMorphs_as_tuples(neighbourCycle,rows, cols, False,False,False) 
+			
+			if neighbourCycle not in all:
+				cyclesToInvestigate.add(neighbourCycle)
+		
+		all |= set(isoMorphs) #isoMorphts also includes the original checkCycleData
+				
+		if i % 200 == 0:
+			print "-------stats----"
+			print len(cyclesToInvestigate)
+			print len(all)
+			# print checkCycleNeighbourNames
+			
+		if i% 500000 == 0 and i > 400000:
+			fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_step{}.txt".format(ROWS,COLS,i),list(all)+ list(cyclesToInvestigate))
+		i += 1
+	return all	
+	
+	
+	
+	
+	
 	
 def convertCyclesDataToNames(rows, cols, cyclesData):
 	cyclesNames = []
@@ -927,7 +1037,7 @@ def convertCyclesNamesToDetailedNames(rows, cols, cyclesNames):
 	return detailedNames
 
 
-def printIsoMorphs(rows, cols, withFlippedOnes = True, cycleData = None, addRandomness = True):
+def printIsoMorphs(rows, cols, withFlippedOnes = True, cycleData = None, addRandomness = True, testAsNameString = False):
 	if cycleData is None:
 		print "creating own cycledata with some iterations..."
 		startCycle = None
@@ -944,26 +1054,40 @@ def printIsoMorphs(rows, cols, withFlippedOnes = True, cycleData = None, addRand
 	print "original cycle:"
 	initCycle.print_cells_ASCII(False)	
 	print "all isomorphs:"
-	isoMorphs =  initCycle.get_isoMorphs_as_nameString()
+	if testAsNameString:
 		
-	
-	for isoMorph in isoMorphs:
-		initCycle = HamiltonCycle(ROWS,COLS,None,isoMorph)
-		initCycle.print_cells_ASCII(False)	
-		print ""
-	
+		isoMorphs =  initCycle.get_isoMorphs_as_nameString()
+		for isoMorph in isoMorphs:
+			initCycle = HamiltonCycle(ROWS,COLS,None,isoMorph)
+			initCycle.print_cells_ASCII(False)	
+			print ""
+	else:
+		isoMorphs = get_isoMorphs_as_tuples(initCycle.get_cycle_as_tuple(),rows,cols,False,True)
+		for isoMorph in isoMorphs:
+			initCycle = HamiltonCycle(ROWS,COLS,isoMorph)
+			initCycle.print_cells_ASCII(False)	
+			print ""
+			
 if __name__== "__main__":
 	path = [ (2, 1), (2, 0), (3, 0),(3,1),(3, 2), (3, 3), (3, 4), (3,5), (2, 5), (1, 5), (0, 5), (0, 4), (1, 4), (2, 4), (2, 3), (1, 3), (0,3), (0, 2), (0, 1), (0, 0), (1, 0), (1, 1), (1, 2), (2, 2),(2,1)]    #hamilton cycle
 	# path = [ (2, 1), (2, 0), (3, 0),(3,1)],[(3, 2), (3, 3), (3, 4), (3,5), (2, 5), (1, 5), (0, 5), (0, 4), (1, 4), (2, 4), (2, 3), (1, 3), (0,3), (0, 2), (0, 1), (0, 0), (1, 0), (1, 1), (1, 2), (2, 2)]    #valid paths
 	path = None
 	ROWS = 8
-	COLS = 8
+	COLS = 6
 	print "ROWS:{}, COLS:{}".format(str(ROWS),str(COLS))
 	
 	
 	
 	
 	timePointAnchor = fileOperations.getTime()
+	 
+	 
+	# allCyclesData = getAllPossibilities(ROWS,COLS)
+	# allCycleNames_A = convertCyclesNamesToDetailedNames(ROWS, COLS, allCyclesData)
+	# print len(allCycleNames_A)
+	# deltaT = fileOperations.getTime() - timePointAnchor
+	# timePointAnchor = fileOperations.getTime() - timePointAnchor
+	# print deltaT 
 	 
 	# allCyclesData = getAllPossibilities_fast(ROWS,COLS)
 	# allCycleNames_A = convertCyclesDataToDetailedNames(ROWS, COLS, allCyclesData)
@@ -973,17 +1097,22 @@ if __name__== "__main__":
 	# timePointAnchor = fileOperations.getTime() - timePointAnchor
 	# print deltaT
 	
-	# allCyclesData = getAllPossibilities(ROWS,COLS)
-	# allCycleNames_A = convertCyclesDataToDetailedNames(ROWS, COLS, allCyclesData)
-	# print len(allCycleNames_A)
+	
+	
+	# allCycleNames = getAllPossibilities_super_fast(ROWS,COLS)
+	# allCycleNames_A = convertCyclesNamesToDetailedNames(ROWS, COLS, allCycleNames)
+	# fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_detailedNameString.txt".format(ROWS,COLS),allCycleNames_A)
+	# print len(allCycleNames)
 	# deltaT = fileOperations.getTime() - timePointAnchor
 	# timePointAnchor = fileOperations.getTime() - timePointAnchor
 	# print deltaT
 	
-	allCycleNames = getAllPossibilities_super_fast(ROWS,COLS)
-	allCycleNames_A = convertCyclesNamesToDetailedNames(ROWS, COLS, allCycleNames)
+	allCycles = getAllPossibilities_mega_fast(ROWS,COLS)
+	allCycleNames_A = convertCyclesDataToDetailedNames(ROWS, COLS, allCycles)
 	fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_detailedNameString.txt".format(ROWS,COLS),allCycleNames_A)
-	print len(allCycleNames)
+	print len(allCycles)
+	# for c in allCycles:
+		# print c
 	deltaT = fileOperations.getTime() - timePointAnchor
 	timePointAnchor = fileOperations.getTime() - timePointAnchor
 	print deltaT
@@ -994,7 +1123,11 @@ if __name__== "__main__":
 	
 	# initCycle = HamiltonCycle(ROWS,COLS,None)
 	# initCycle.print_cells_ASCII(False)
-	# neighbours = initCycle.getNeighbourCycles()
+	# test = initCycle.get_isoMorphs_as_tuples(False,True)
 	
 	
-	# printIsoMorphs(ROWS, COLS, True, None, True)
+	
+	# tracker.print_diff()
+	# printIsoMorphs(ROWS, COLS, withFlippedOnes = True, cycleData = None, addRandomness = True, testAsNameString = False)
+	
+	
