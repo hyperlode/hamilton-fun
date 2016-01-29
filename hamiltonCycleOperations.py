@@ -642,21 +642,24 @@ class HamiltonCycle():
 		keep,b = self.__lattice.rows(), self.__lattice.cols()
 		# keep, b = cellRows, cellCols
 		
-		
+		#smallest in keep
 		if keep>b:
 			keep,b = b,keep
 		
+		#if smallest side is odd, we have a last ring single cell width.
+		lastRingSingleCellWidth = False
 		if keep%2 !=0:
 			keep -= 1
-		
+			lastRingSingleCellWidth
+			
 		rings = keep/2
 		
-		lastRingSingleCellWidth = False
 		
-		if self.__lattice.rows()%2 == 0 or self.__lattice.cols()%2 == 0:
-			#if not rows or cols odd then, we have in the middle a fake ring (one cell wide)
-			#this will cause cells to be counted twice! So, beware
-			lastRingSingleCellWidth = True
+		
+		# if self.__lattice.rows()%2 == 0 or self.__lattice.cols()%2 == 0:
+			# #if not rows or cols odd then, we have in the middle a fake ring (one cell wide)
+			# #this will cause cells to be counted twice! So, beware
+			# lastRingSingleCellWidth = True
 			
 			# print "oaijeioj"
 		# print "diddij"
@@ -1064,8 +1067,8 @@ if __name__== "__main__":
 	path = [ (2, 1), (2, 0), (3, 0),(3,1),(3, 2), (3, 3), (3, 4), (3,5), (2, 5), (1, 5), (0, 5), (0, 4), (1, 4), (2, 4), (2, 3), (1, 3), (0,3), (0, 2), (0, 1), (0, 0), (1, 0), (1, 1), (1, 2), (2, 2),(2,1)]    #hamilton cycle
 	# path = [ (2, 1), (2, 0), (3, 0),(3,1)],[(3, 2), (3, 3), (3, 4), (3,5), (2, 5), (1, 5), (0, 5), (0, 4), (1, 4), (2, 4), (2, 3), (1, 3), (0,3), (0, 2), (0, 1), (0, 0), (1, 0), (1, 1), (1, 2), (2, 2)]    #valid paths
 	path = None
-	ROWS = 7
-	COLS = 8
+	ROWS = 8
+	COLS = 7
 	print "ROWS:{}, COLS:{}".format(str(ROWS),str(COLS))
 	
 	
@@ -1081,13 +1084,13 @@ if __name__== "__main__":
 	# timePointAnchor = fileOperations.getTime() - timePointAnchor
 	# print deltaT 
 	 
-	allCyclesData = getAllPossibilities_fast(ROWS,COLS)
-	allCycleNames_A = convertCyclesDataToDetailedNames(ROWS, COLS, allCyclesData)
-	print len(allCycleNames_A)
-	fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_detailedNameString.txt".format(ROWS,COLS),list(allCycleNames_A))
-	deltaT = fileOperations.getTime() - timePointAnchor
-	timePointAnchor = fileOperations.getTime() - timePointAnchor
-	print deltaT
+	# allCyclesData = getAllPossibilities_fast(ROWS,COLS)
+	# allCycleNames_A = convertCyclesDataToDetailedNames(ROWS, COLS, allCyclesData)
+	# print len(allCycleNames_A)
+	# fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_detailedNameString.txt".format(ROWS,COLS),list(allCycleNames_A))
+	# deltaT = fileOperations.getTime() - timePointAnchor
+	# timePointAnchor = fileOperations.getTime() - timePointAnchor
+	# print deltaT
 	
 	
 	
@@ -1099,15 +1102,15 @@ if __name__== "__main__":
 	# timePointAnchor = fileOperations.getTime() - timePointAnchor
 	# print deltaT
 	
-	# allCycles = getAllPossibilities_mega_fast(ROWS,COLS)
-	# allCycleNames_A = convertCyclesDataToDetailedNames(ROWS, COLS, allCycles)
-	# fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_detailedNameString.txt".format(ROWS,COLS),allCycleNames_A)
-	# print len(allCycles)
-	# # for c in allCycles:
-		# # print c
-	# deltaT = fileOperations.getTime() - timePointAnchor
-	# timePointAnchor = fileOperations.getTime() - timePointAnchor
-	# print deltaT
+	allCycles = getAllPossibilities_mega_fast(ROWS,COLS)
+	allCycleNames_A = convertCyclesDataToDetailedNames(ROWS, COLS, allCycles)
+	fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_detailedNameString.txt".format(ROWS,COLS),allCycleNames_A)
+	print len(allCycles)
+	# for c in allCycles:
+		# print c
+	deltaT = fileOperations.getTime() - timePointAnchor
+	timePointAnchor = fileOperations.getTime() - timePointAnchor
+	print deltaT
 	
 	# fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_detailedNameString.txt".format(ROWS,COLS),list(allCycleNames_A))
 	# fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_BBBB.txt".format(ROWS,COLS),list(allCycleNames))
