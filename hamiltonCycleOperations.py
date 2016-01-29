@@ -976,32 +976,25 @@ def getAllPossibilities_mega_fast(rows, cols):
 	initCycle = HamiltonCycle(rows,cols,None)
 	initCycleData = initCycle.get_cycle_as_tuple()
 	cyclesToInvestigate = set([initCycleData])
-	all = set([])
+	all = set([]) #contains all cycles after their neighbours have been harvested.
 	i = 0
 	while len(cyclesToInvestigate)>0:
 		
 		checkCycleData = cyclesToInvestigate.pop() #get the cycle to investigate
-		 #add cycle to found ones
+		cycle = HamiltonCycle(rows,cols,checkCycleData) #create cycle instance
 		
-		cycle = HamiltonCycle(rows,cols,checkCycleData)
-		cycle.find_all_neighbour_hamilton_cycles()
-		neighbourCyclesData = cycle.get_hamilton_cycle_neighbours_as_tuples() 
+		cycle.find_all_neighbour_hamilton_cycles() #find neighbours
+		neighbourCyclesData = cycle.get_hamilton_cycle_neighbours_as_tuples() #get neighbours
 		
-		
-
-		isoMorphs = get_isoMorphs_as_tuples(checkCycleData,rows, cols, False,True ,False) 
-		
-		# isoMorphs = cycle.get_isoMorphs_as_tuples(True,True)
+		isoMorphs = get_isoMorphs_as_tuples(checkCycleData,rows, cols, False,True ,False) #get neighbours from investigate cycle (including itself)
 		
 		for neighbourCycle in neighbourCyclesData:
-			#get all isoMorphs
+			isoMorphs|= get_isoMorphs_as_tuples(neighbourCycle,rows, cols, False,False,False) #get all isoMorphs from all neighbours
 			
-			isoMorphs|= get_isoMorphs_as_tuples(neighbourCycle,rows, cols, False,False,False) 
-			
-			if neighbourCycle not in all:
+			if neighbourCycle not in all:	#put neighbour in list to investigate if not yet looked at.
 				cyclesToInvestigate.add(neighbourCycle)
 		
-		all |= set(isoMorphs) #isoMorphts also includes the original checkCycleData
+		all |= set(isoMorphs) #isoMorphts also includes the original checkCycleData, isomorphs can be added to investigated, because its base with its neighbours will be looked at.
 				
 		if i % 200 == 0:
 			print "-------stats----"
@@ -1013,12 +1006,7 @@ def getAllPossibilities_mega_fast(rows, cols):
 			fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_step{}.txt".format(ROWS,COLS,i),list(all)+ list(cyclesToInvestigate))
 		i += 1
 	return all	
-	
-	
-	
-	
-	
-	
+		
 def convertCyclesDataToNames(rows, cols, cyclesData):
 	cyclesNames = []
 	for cycleData in cyclesData:
@@ -1076,8 +1064,8 @@ if __name__== "__main__":
 	path = [ (2, 1), (2, 0), (3, 0),(3,1),(3, 2), (3, 3), (3, 4), (3,5), (2, 5), (1, 5), (0, 5), (0, 4), (1, 4), (2, 4), (2, 3), (1, 3), (0,3), (0, 2), (0, 1), (0, 0), (1, 0), (1, 1), (1, 2), (2, 2),(2,1)]    #hamilton cycle
 	# path = [ (2, 1), (2, 0), (3, 0),(3,1)],[(3, 2), (3, 3), (3, 4), (3,5), (2, 5), (1, 5), (0, 5), (0, 4), (1, 4), (2, 4), (2, 3), (1, 3), (0,3), (0, 2), (0, 1), (0, 0), (1, 0), (1, 1), (1, 2), (2, 2)]    #valid paths
 	path = None
-	ROWS = 8
-	COLS = 7
+	ROWS = 7
+	COLS = 8
 	print "ROWS:{}, COLS:{}".format(str(ROWS),str(COLS))
 	
 	
@@ -1093,13 +1081,13 @@ if __name__== "__main__":
 	# timePointAnchor = fileOperations.getTime() - timePointAnchor
 	# print deltaT 
 	 
-	# allCyclesData = getAllPossibilities_fast(ROWS,COLS)
-	# allCycleNames_A = convertCyclesDataToDetailedNames(ROWS, COLS, allCyclesData)
-	# print len(allCycleNames_A)
-	# fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_detailedNameString.txt".format(ROWS,COLS),list(allCycleNames_A))
-	# deltaT = fileOperations.getTime() - timePointAnchor
-	# timePointAnchor = fileOperations.getTime() - timePointAnchor
-	# print deltaT
+	allCyclesData = getAllPossibilities_fast(ROWS,COLS)
+	allCycleNames_A = convertCyclesDataToDetailedNames(ROWS, COLS, allCyclesData)
+	print len(allCycleNames_A)
+	fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_detailedNameString.txt".format(ROWS,COLS),list(allCycleNames_A))
+	deltaT = fileOperations.getTime() - timePointAnchor
+	timePointAnchor = fileOperations.getTime() - timePointAnchor
+	print deltaT
 	
 	
 	
@@ -1111,15 +1099,15 @@ if __name__== "__main__":
 	# timePointAnchor = fileOperations.getTime() - timePointAnchor
 	# print deltaT
 	
-	allCycles = getAllPossibilities_mega_fast(ROWS,COLS)
-	allCycleNames_A = convertCyclesDataToDetailedNames(ROWS, COLS, allCycles)
-	fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_detailedNameString.txt".format(ROWS,COLS),allCycleNames_A)
-	print len(allCycles)
-	# for c in allCycles:
-		# print c
-	deltaT = fileOperations.getTime() - timePointAnchor
-	timePointAnchor = fileOperations.getTime() - timePointAnchor
-	print deltaT
+	# allCycles = getAllPossibilities_mega_fast(ROWS,COLS)
+	# allCycleNames_A = convertCyclesDataToDetailedNames(ROWS, COLS, allCycles)
+	# fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_detailedNameString.txt".format(ROWS,COLS),allCycleNames_A)
+	# print len(allCycles)
+	# # for c in allCycles:
+		# # print c
+	# deltaT = fileOperations.getTime() - timePointAnchor
+	# timePointAnchor = fileOperations.getTime() - timePointAnchor
+	# print deltaT
 	
 	# fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_detailedNameString.txt".format(ROWS,COLS),list(allCycleNames_A))
 	# fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_BBBB.txt".format(ROWS,COLS),list(allCycleNames))
