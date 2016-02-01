@@ -3,7 +3,9 @@ import twoCyclesCoverAllPointsInLatticeOperations
 import random 
 import graphs
 import fileOperations
-from pympler.tracker import SummaryTracker #http://stackoverflow.com/questions/1435415/python-memory-leaks
+
+import sys
+# from pympler.tracker import SummaryTracker #http://stackoverflow.com/questions/1435415/python-memory-leaks
 # tracker = SummaryTracker()
 
 
@@ -491,6 +493,7 @@ class HamiltonCycle():
 	def get_hamilton_cycle_neighbours_as_tuples(self):
 		return [ tuple(neighbour) for neighbour in self.__neighbourHamiltonCycles]
 	
+	
 	def find_split_cells(self):
 		#find all potential split cells in path or cycle.  
 		#  cell (0,0) with its corner nodes:
@@ -943,11 +946,12 @@ def getAllPossibilities_super_fast(rows, cols):
 	
 	cyclesToInvestigate = set([initCycleName])
 	all = set([])
+	all_withNeighbours = {}
 	i = 0
 	while len(cyclesToInvestigate)>0:
 		
 		checkCycleName = cyclesToInvestigate.pop() #get the cycle to investigate
-		 #add cycle to found ones
+		 
 		
 		checkCycleNeighbourNames, isoMorphs_set = getNeighbourCyclesAsNames(rows, cols, checkCycleName, True)
 			
@@ -955,10 +959,10 @@ def getAllPossibilities_super_fast(rows, cols):
 		for cycle in checkCycleNeighbourNames:
 			if cycle not in all:
 				cyclesToInvestigate.add(cycle)
-		
+		#add cycle to found ones
 		all |= isoMorphs_set
 		all.add(checkCycleName)
-
+		all_withNeighbours[checkCycleName]= checkCycleNeighbourNames
 		
 		if i % 200 == 0:
 			print "-------stats----"
@@ -971,8 +975,124 @@ def getAllPossibilities_super_fast(rows, cols):
 		i += 1
 	return all
 	
+def getAllPossibilities_mega_fast_withPickleDump(rows,cols,dumpBasePath = r"c:\temp"):
+	#check if dump exists, if so, load data from there.
+	timePointAnchor = fileOperations.getTime()
 	
+	# allDumpFileName = fileOperations.combinePathNameExt(dumpBasePath, "{}x{}_all_temp".format(rows,cols),".pickle")
+	# toInvestigateDumpFileName = fileOperations.combinePathNameExt(dumpBasePath, "{}x{}_toInvestigate_temp".format(rows,cols),".pickle")
 	
+	allDumpFileName = fileOperations.combinePathNameExt(dumpBasePath, "{}x{}_all_temp".format(rows,cols),".pickleZip")
+	toInvestigateDumpFileName = fileOperations.combinePathNameExt(dumpBasePath, "{}x{}_toInvestigate_temp".format(rows,cols),".pickleZip")
+	
+	previousAllLenght = 0
+	if fileOperations.pathExists(allDumpFileName) and fileOperations.pathExists(toInvestigateDumpFileName):
+		print fileOperations.getTime() - timePointAnchor
+		print "loading dump files:"
+		# all  = 	fileOperations.retrieveDataPickle( allDumpFileName )
+		# cyclesToInvestigate  = 	fileOperations.retrieveDataPickle(  toInvestigateDumpFileName )
+		
+		all = fileOperations.load_zipped_pickle(allDumpFileName)
+		cyclesToInvestigate = fileOperations.load_zipped_pickle(toInvestigateDumpFileName)
+		previousAllLenght = len(all)
+		
+		print "loaded from files: {} cycles, and {} cycles to investigate".format(len(all), len(cyclesToInvestigate))
+		print fileOperations.getTime() - timePointAnchor
+	else:
+		initCycle = HamiltonCycle(rows,cols,None)
+		initCycleData = initCycle.get_cycle_as_tuple()
+		cyclesToInvestigate = set([initCycleData])
+		all = set([]) #contains all cycles after their neighbours have been harvested.
+	
+	allDumpFileName = fileOperations.combinePathNameExt(dumpBasePath, "{}x{}_all_temp".format(rows,cols),".pickleZip")
+	toInvestigateDumpFileName = fileOperations.combinePathNameExt(dumpBasePath, "{}x{}_toInvestigate_temp".format(rows,cols),".pickleZip")
+	
+
+	lastSavingTime = fileOperations.getTime()
+	i = 0
+	
+	print fileOperations.getTime()
+	try:
+		while len(cyclesToInvestigate)>0:
+			
+			checkCycleData = cyclesToInvestigate.pop() #get the cycle to investigate
+			cycle = HamiltonCycle(rows,cols,checkCycleData) #create cycle instance
+			
+			cycle.find_all_neighbour_hamilton_cycles() #find neighbours
+			neighbourCyclesData = cycle.get_hamilton_cycle_neighbours_as_tuples() #get neighbours
+			
+			isoMorphs = get_isoMorphs_as_tuples(checkCycleData,rows, cols, False,True ,False) #get neighbours from investigate cycle (including itself)
+			
+			
+			
+			for neighbourCycle in neighbourCyclesData:
+				
+				isoMorphs|= get_isoMorphs_as_tuples(neighbourCycle,rows, cols, False,False,False) #get all isoMorphs from all neighbours
+				
+				# if str(neighbourCycle) not in all:	#put neighbour in list to investigate if not yet looked at.
+				if neighbourCycle not in all:	#put neighbour in list to investigate if not yet looked at.
+					cyclesToInvestigate.add(neighbourCycle)
+			
+			# # convert isoMorphs to string
+			# isoMorphs = [str(iso) for iso in isoMorphs]
+			
+			all |= set(isoMorphs) #isoMorphts also includes the original checkCycleData, isomorphs can be added to investigated, because its base with its neighbours will be looked at.
+			
+			# if i % 1000 == 0:
+			if fileOperations.getTime() - lastSavingTime > 900 or len(all) - previousAllLenght > 200000 : 
+				#dump data
+				print "dumping data... please do not close the program now."
+				print fileOperations.getTime() - timePointAnchor
+				fileOperations.save_zipped_pickle(all, allDumpFileName)
+				fileOperations.save_zipped_pickle(cyclesToInvestigate, toInvestigateDumpFileName)
+				print "data dump done."
+				print fileOperations.getTime() - timePointAnchor
+				lastSavingTime = fileOperations.getTime()
+				previousAllLenght = len(all)
+			
+			
+			if i % 200 == 0:
+				print "-------stats----"
+				print len(cyclesToInvestigate)
+				print len(all)
+				print len (neighbourCyclesData)
+				print sys.getsizeof(next(iter(cyclesToInvestigate)))
+				print cycle
+				
+				print fileOperations.getTime() - timePointAnchor
+				timePointAnchor = fileOperations.getTime() - timePointAnchor
+				print fileOperations.getTime()
+				# print checkCycleNeighbourNames
+				print i 
+			# if len(all)>680000:
+				# print len(all)
+				# print cycle
+				# print sys.getsizeof(all)
+				# print sys.getsizeof(cyclesToInvestigate)
+			
+			# if i% 500000 == 0 and i > 400000:
+				# fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_step{}.txt".format(ROWS,COLS,i),list(all)+ list(cyclesToInvestigate))
+			i += 1
+		return all	
+	except:
+		print "-------stats----"
+		print len(cyclesToInvestigate)
+		print len(all)
+		print len (neighbourCyclesData)
+		print i 
+		
+		#dump data
+		# fileOperations.dumpDataPickle(all, fileOperations.extendNameInPath(allDumpFileName,"_crashRecovery"))
+		# fileOperations.dumpDataPickle(cyclesToInvestigate, fileOperations.extendNameInPath(toInvestigateDumpFileName,"_crashRecovery"))
+		
+		print fileOperations.getTime() - timePointAnchor
+		timePointAnchor = fileOperations.getTime() - timePointAnchor
+		
+		
+		raise	
+		
+	
+		
 def getAllPossibilities_mega_fast(rows, cols):
 	#from every neighbour, also takes isomorphs (rotations and symmetries) right away.
 	
@@ -981,35 +1101,64 @@ def getAllPossibilities_mega_fast(rows, cols):
 	cyclesToInvestigate = set([initCycleData])
 	all = set([]) #contains all cycles after their neighbours have been harvested.
 	i = 0
-	while len(cyclesToInvestigate)>0:
-		
-		checkCycleData = cyclesToInvestigate.pop() #get the cycle to investigate
-		cycle = HamiltonCycle(rows,cols,checkCycleData) #create cycle instance
-		
-		cycle.find_all_neighbour_hamilton_cycles() #find neighbours
-		neighbourCyclesData = cycle.get_hamilton_cycle_neighbours_as_tuples() #get neighbours
-		
-		isoMorphs = get_isoMorphs_as_tuples(checkCycleData,rows, cols, False,True ,False) #get neighbours from investigate cycle (including itself)
-		
-		for neighbourCycle in neighbourCyclesData:
-			isoMorphs|= get_isoMorphs_as_tuples(neighbourCycle,rows, cols, False,False,False) #get all isoMorphs from all neighbours
+	
+	timePointAnchor = fileOperations.getTime()
+	
+	try:
+		while len(cyclesToInvestigate)>0:
 			
-			if neighbourCycle not in all:	#put neighbour in list to investigate if not yet looked at.
-				cyclesToInvestigate.add(neighbourCycle)
-		
-		all |= set(isoMorphs) #isoMorphts also includes the original checkCycleData, isomorphs can be added to investigated, because its base with its neighbours will be looked at.
+			checkCycleData = cyclesToInvestigate.pop() #get the cycle to investigate
+			cycle = HamiltonCycle(rows,cols,checkCycleData) #create cycle instance
+			
+			cycle.find_all_neighbour_hamilton_cycles() #find neighbours
+			neighbourCyclesData = cycle.get_hamilton_cycle_neighbours_as_tuples() #get neighbours
+			
+			isoMorphs = get_isoMorphs_as_tuples(checkCycleData,rows, cols, False,True ,False).copy() #get neighbours from investigate cycle (including itself)
+			
+			for neighbourCycle in neighbourCyclesData:
 				
-		if i % 200 == 0:
-			print "-------stats----"
-			print len(cyclesToInvestigate)
-			print len(all)
-			# print checkCycleNeighbourNames
+				isoMorphs|= get_isoMorphs_as_tuples(neighbourCycle,rows, cols, False,False,False).copy() #get all isoMorphs from all neighbours
+				
+				if neighbourCycle not in all:	#put neighbour in list to investigate if not yet looked at.
+					cyclesToInvestigate.add(neighbourCycle)
 			
-		if i% 500000 == 0 and i > 400000:
-			fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_step{}.txt".format(ROWS,COLS,i),list(all)+ list(cyclesToInvestigate))
-		i += 1
-	return all	
+			all |= set(isoMorphs) #isoMorphs also includes the original checkCycleData, isomorphs can be added to investigated, because its base with its neighbours will be looked at.
+					
+			if i % 200 == 0:
+				print "-------stats----"
+				print len(cyclesToInvestigate)
+				print len(all)
+				print len (neighbourCyclesData)
+				print sys.getsizeof(next(iter(cyclesToInvestigate)))
+				
+				
+				deltaT = fileOperations.getTime() - timePointAnchor
+				timePointAnchor = fileOperations.getTime() - timePointAnchor
+				print deltaT
+				# print checkCycleNeighbourNames
+				print i 
+			if len(all)>680000:
+				print len(all)
+				print cycle
+				print sys.getsizeof(all)
+				print sys.getsizeof(cyclesToInvestigate)
+			
+			# if i% 500000 == 0 and i > 400000:
+				# fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_step{}.txt".format(ROWS,COLS,i),list(all)+ list(cyclesToInvestigate))
+			i += 1
+		return all	
+	except:
+		print "-------stats----"
+		print len(cyclesToInvestigate)
+		print len(all)
+		print len (neighbourCyclesData)
+		print i 
 		
+		deltaT = fileOperations.getTime() - timePointAnchor
+		timePointAnchor = fileOperations.getTime() - timePointAnchor
+		print deltaT
+		
+		raise
 def convertCyclesDataToNames(rows, cols, cyclesData):
 	cyclesNames = []
 	for cycleData in cyclesData:
@@ -1068,7 +1217,7 @@ if __name__== "__main__":
 	# path = [ (2, 1), (2, 0), (3, 0),(3,1)],[(3, 2), (3, 3), (3, 4), (3,5), (2, 5), (1, 5), (0, 5), (0, 4), (1, 4), (2, 4), (2, 3), (1, 3), (0,3), (0, 2), (0, 1), (0, 0), (1, 0), (1, 1), (1, 2), (2, 2)]    #valid paths
 	path = None
 	ROWS = 8
-	COLS = 7
+	COLS = 8
 	print "ROWS:{}, COLS:{}".format(str(ROWS),str(COLS))
 	
 	
@@ -1102,7 +1251,8 @@ if __name__== "__main__":
 	# timePointAnchor = fileOperations.getTime() - timePointAnchor
 	# print deltaT
 	
-	allCycles = getAllPossibilities_mega_fast(ROWS,COLS)
+	# allCycles = getAllPossibilities_mega_fast(ROWS,COLS)
+	allCycles = getAllPossibilities_mega_fast_withPickleDump(ROWS,COLS)
 	allCycleNames_A = convertCyclesDataToDetailedNames(ROWS, COLS, allCycles)
 	fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_detailedNameString.txt".format(ROWS,COLS),allCycleNames_A)
 	print len(allCycles)
