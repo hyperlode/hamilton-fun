@@ -937,25 +937,47 @@ def getAllPossibilities_fast(rows, cols):
 	
 	return all
 
-def getAllPossibilities_super_fast(rows, cols):
+def getAllPossibilities_super_fast(rows, cols,  dumpBasePath = None, dataDumpZipped = False , resultsPath = r"c:\temp"):
 	#from every neighbour, also takes isomorphs (rotations and symmetries) right away.
+	timePointAnchor = fileOperations.getTime()
+	previousAllLenght = 0
+	lastSavingTime = fileOperations.getTime()
 	
-	initCycle = HamiltonCycle(rows,cols,None)
-	initCycleName = initCycle.get_cycle_as_nameString("")
+	if dumpBasePath is not None:
+		allDumpFileName = fileOperations.combinePathNameExt(dumpBasePath, "{}x{}_all_name_temp".format(rows,cols),".pickle")
+		allDumpFileNameWithNeighbours = fileOperations.combinePathNameExt(dumpBasePath, "{}x{}_allWithNeighbours_name_temp".format(rows,cols),".pickle")
+		toInvestigateDumpFileName = fileOperations.combinePathNameExt(dumpBasePath, "{}x{}_toInvestigate_name_temp".format(rows,cols),".pickle")
 	
 	
-	cyclesToInvestigate = set([initCycleName])
-	all = set([])
-	all_withNeighbours = {}
+	if dumpBasePath is not None and fileOperations.pathExists(allDumpFileName) and fileOperations.pathExists(allDumpFileNameWithNeighbours) and fileOperations.pathExists(toInvestigateDumpFileName):
+		print fileOperations.getTime() - timePointAnchor
+		print "loading dump files:"
+		
+		#retrieve data
+		all = fileOperations.retrieveDataPickle(allDumpFileName, zipped = dataDumpZipped)
+		cyclesToInvestigate = fileOperations.retrieveDataPickle(toInvestigateDumpFileName, zipped = dataDumpZipped)
+		all_withNeighbours = fileOperations.retrieveDataPickle(allDumpFileNameWithNeighbours, zipped = dataDumpZipped)
+		
+		previousAllLenght = len(all)
+		
+		print "loaded from files: {} cycles, and {} cycles to investigate".format(len(all), len(cyclesToInvestigate))
+		print fileOperations.getTime() - timePointAnchor
+		
+	else:
+		initCycle = HamiltonCycle(rows,cols,None)
+		initCycleName = initCycle.get_cycle_as_nameString("")
+		
+		cyclesToInvestigate = set([initCycleName])
+		all = set([])
+		all_withNeighbours = {}
+	
+	#harvest cycles!
 	i = 0
 	while len(cyclesToInvestigate)>0:
 		
 		checkCycleName = cyclesToInvestigate.pop() #get the cycle to investigate
-		 
-		
 		checkCycleNeighbourNames, isoMorphs_set = getNeighbourCyclesAsNames(rows, cols, checkCycleName, True)
 			
-		
 		for cycle in checkCycleNeighbourNames:
 			if cycle not in all:
 				cyclesToInvestigate.add(cycle)
@@ -964,16 +986,32 @@ def getAllPossibilities_super_fast(rows, cols):
 		all.add(checkCycleName)
 		all_withNeighbours[checkCycleName]= checkCycleNeighbourNames
 		
+		
+		if dumpBasePath is not None and (fileOperations.getTime() - lastSavingTime > 900 or len(all) - previousAllLenght > 200000 ): 
+			#dump data as a back up.
+			print "dumping data... please do not close the program now."
+			print fileOperations.getTime() - timePointAnchor
+			fileOperations.dumpDataPickle(all, allDumpFileName)
+			fileOperations.dumpDataPickle(cyclesToInvestigate, toInvestigateDumpFileName)
+			fileOperations.dumpDataPickle(all_withNeighbours, allDumpFileNameWithNeighbours)
+			print "data dump done."
+			print fileOperations.getTime() - timePointAnchor
+			lastSavingTime = fileOperations.getTime()
+			previousAllLenght = len(all)
+				
+				
 		if i % 200 == 0:
 			print "-------stats----"
 			print len(cyclesToInvestigate)
 			print len(all)
+			print fileOperations.getTime() - timePointAnchor
+			print cycle
 			# print checkCycleNeighbourNames
 			
 		if i% 500000 == 0 and i > 400000:
 			fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_step{}.txt".format(ROWS,COLS,i),list(all)+ list(cyclesToInvestigate))
 		i += 1
-	return all
+	return all_withNeighbours
 	
 def getAllPossibilities_mega_fast_withPickleDump(rows,cols,dumpBasePath = r"c:\temp"):
 	#check if dump exists, if so, load data from there.
@@ -1004,8 +1042,8 @@ def getAllPossibilities_mega_fast_withPickleDump(rows,cols,dumpBasePath = r"c:\t
 		cyclesToInvestigate = set([initCycleData])
 		all = set([]) #contains all cycles after their neighbours have been harvested.
 	
-	allDumpFileName = fileOperations.combinePathNameExt(dumpBasePath, "{}x{}_all_temp".format(rows,cols),".pickleZip")
-	toInvestigateDumpFileName = fileOperations.combinePathNameExt(dumpBasePath, "{}x{}_toInvestigate_temp".format(rows,cols),".pickleZip")
+	# allDumpFileName = fileOperations.combinePathNameExt(dumpBasePath, "{}x{}_all_temp".format(rows,cols),".pickleZip")
+	# toInvestigateDumpFileName = fileOperations.combinePathNameExt(dumpBasePath, "{}x{}_toInvestigate_temp".format(rows,cols),".pickleZip")
 	
 
 	lastSavingTime = fileOperations.getTime()
@@ -1090,9 +1128,7 @@ def getAllPossibilities_mega_fast_withPickleDump(rows,cols,dumpBasePath = r"c:\t
 		
 		
 		raise	
-		
-	
-		
+			
 def getAllPossibilities_mega_fast(rows, cols):
 	#from every neighbour, also takes isomorphs (rotations and symmetries) right away.
 	
@@ -1216,8 +1252,8 @@ if __name__== "__main__":
 	path = [ (2, 1), (2, 0), (3, 0),(3,1),(3, 2), (3, 3), (3, 4), (3,5), (2, 5), (1, 5), (0, 5), (0, 4), (1, 4), (2, 4), (2, 3), (1, 3), (0,3), (0, 2), (0, 1), (0, 0), (1, 0), (1, 1), (1, 2), (2, 2),(2,1)]    #hamilton cycle
 	# path = [ (2, 1), (2, 0), (3, 0),(3,1)],[(3, 2), (3, 3), (3, 4), (3,5), (2, 5), (1, 5), (0, 5), (0, 4), (1, 4), (2, 4), (2, 3), (1, 3), (0,3), (0, 2), (0, 1), (0, 0), (1, 0), (1, 1), (1, 2), (2, 2)]    #valid paths
 	path = None
-	ROWS = 8
-	COLS = 8
+	ROWS = 6
+	COLS = 6
 	print "ROWS:{}, COLS:{}".format(str(ROWS),str(COLS))
 	
 	
@@ -1243,24 +1279,34 @@ if __name__== "__main__":
 	
 	
 	
-	# allCycleNames = getAllPossibilities_super_fast(ROWS,COLS)
-	# allCycleNames_A = convertCyclesNamesToDetailedNames(ROWS, COLS, allCycleNames)
+	allCycleNames_with_neighbours = getAllPossibilities_super_fast(ROWS,COLS, dumpBasePath = r"c:\temp")
+	# allCycleNames_A = convertCyclesNamesToDetailedNames(ROWS, COLS, allCycleNames_with_neighbours)
 	# fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_detailedNameString.txt".format(ROWS,COLS),allCycleNames_A)
-	# print len(allCycleNames)
-	# deltaT = fileOperations.getTime() - timePointAnchor
-	# timePointAnchor = fileOperations.getTime() - timePointAnchor
-	# print deltaT
+	print len( allCycleNames_with_neighbours)
+	# allWithNeighboursString = fileOperations.dictToString(allCycleNames_with_neighbours)
+	# allWithNeighboursString = ""
+	# for k,v in allCycleNames_with_neighbours.items():
+		# allWithNeighboursString += k + ":" + ",".join(v)+"\n"
+	# allWithNeighboursString = allWithNeighboursString[:-1]
 	
-	# allCycles = getAllPossibilities_mega_fast(ROWS,COLS)
-	allCycles = getAllPossibilities_mega_fast_withPickleDump(ROWS,COLS)
-	allCycleNames_A = convertCyclesDataToDetailedNames(ROWS, COLS, allCycles)
-	fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_detailedNameString.txt".format(ROWS,COLS),allCycleNames_A)
-	print len(allCycles)
-	# for c in allCycles:
-		# print c
+	allWithNeighboursStrings = [k + ":" + ",".join(v) for k,v in allCycleNames_with_neighbours.items() ]
+	
+	fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_asString_withNeighbours.txt".format(ROWS,COLS),allWithNeighboursStrings)
+	print len(allCycleNames_with_neighbours)
 	deltaT = fileOperations.getTime() - timePointAnchor
 	timePointAnchor = fileOperations.getTime() - timePointAnchor
 	print deltaT
+	
+	# # allCycles = getAllPossibilities_mega_fast(ROWS,COLS)
+	# allCycles = getAllPossibilities_mega_fast_withPickleDump(ROWS,COLS)
+	# allCycleNames_A = convertCyclesDataToDetailedNames(ROWS, COLS, allCycles)
+	# fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_detailedNameString.txt".format(ROWS,COLS),allCycleNames_A)
+	# print len(allCycles)
+	# # for c in allCycles:
+		# # print c
+	# deltaT = fileOperations.getTime() - timePointAnchor
+	# timePointAnchor = fileOperations.getTime() - timePointAnchor
+	# print deltaT
 	
 	# fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_detailedNameString.txt".format(ROWS,COLS),list(allCycleNames_A))
 	# fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_BBBB.txt".format(ROWS,COLS),list(allCycleNames))
