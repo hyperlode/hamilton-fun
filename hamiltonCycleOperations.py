@@ -4,7 +4,7 @@ import random
 import graphs
 import fileOperations
 from pympler.tracker import SummaryTracker #http://stackoverflow.com/questions/1435415/python-memory-leaks
-# tracker = SummaryTracker()
+tracker = SummaryTracker()
 
 
 CELL_INSIDE = 0
@@ -1004,7 +1004,7 @@ def getAllPossibilities_mega_fast(rows, cols):
 			print len(cyclesToInvestigate)
 			print len(all)
 			# print checkCycleNeighbourNames
-			
+			tracker.print_diff()
 		if i% 500000 == 0 and i > 400000:
 			fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_step{}.txt".format(ROWS,COLS,i),list(all)+ list(cyclesToInvestigate))
 		i += 1
@@ -1068,7 +1068,7 @@ if __name__== "__main__":
 	# path = [ (2, 1), (2, 0), (3, 0),(3,1)],[(3, 2), (3, 3), (3, 4), (3,5), (2, 5), (1, 5), (0, 5), (0, 4), (1, 4), (2, 4), (2, 3), (1, 3), (0,3), (0, 2), (0, 1), (0, 0), (1, 0), (1, 1), (1, 2), (2, 2)]    #valid paths
 	path = None
 	ROWS = 8
-	COLS = 7
+	COLS = 8
 	print "ROWS:{}, COLS:{}".format(str(ROWS),str(COLS))
 	
 	
@@ -1102,16 +1102,20 @@ if __name__== "__main__":
 	# timePointAnchor = fileOperations.getTime() - timePointAnchor
 	# print deltaT
 	
-	allCycles = getAllPossibilities_mega_fast(ROWS,COLS)
-	allCycleNames_A = convertCyclesDataToDetailedNames(ROWS, COLS, allCycles)
-	fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_detailedNameString.txt".format(ROWS,COLS),allCycleNames_A)
-	print len(allCycles)
-	# for c in allCycles:
-		# print c
-	deltaT = fileOperations.getTime() - timePointAnchor
-	timePointAnchor = fileOperations.getTime() - timePointAnchor
-	print deltaT
-	
+	try:
+		allCycles = getAllPossibilities_mega_fast(ROWS,COLS)
+		allCycleNames_A = convertCyclesDataToDetailedNames(ROWS, COLS, allCycles)
+		fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_detailedNameString.txt".format(ROWS,COLS),allCycleNames_A)
+		print len(allCycles)
+		# for c in allCycles:
+			# print c
+		deltaT = fileOperations.getTime() - timePointAnchor
+		timePointAnchor = fileOperations.getTime() - timePointAnchor
+		print deltaT
+	except:
+		print "error"
+		tracker.print_diff()
+		raise
 	# fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_detailedNameString.txt".format(ROWS,COLS),list(allCycleNames_A))
 	# fileOperations.linesToFile( r"c:\temp\foundHamiltonCyclesFor{}rows_{}cols_BBBB.txt".format(ROWS,COLS),list(allCycleNames))
 	print "done"
@@ -1124,7 +1128,7 @@ if __name__== "__main__":
 	
 	
 	
-	# tracker.print_diff()
+	
 	# printIsoMorphs(ROWS, COLS, withFlippedOnes = True, cycleData = None, addRandomness = True, testAsNameString = False)
 	
 	
